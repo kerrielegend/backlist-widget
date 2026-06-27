@@ -15,22 +15,29 @@
   }
 
   .grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-    max-width: 900px;
-    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 8px 4px 20px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
   }
 
-  @media (max-width: 700px) {
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  }
-  @media (max-width: 400px) {
-    .grid { grid-template-columns: 1fr; }
-  }
+  .grid::-webkit-scrollbar { height: 4px; }
+  .grid::-webkit-scrollbar-track { background: transparent; }
+  .grid::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
   /* Book card */
-  .book-card { display: flex; flex-direction: column; }
+  .book-card {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    width: 140px;
+    scroll-snap-align: start;
+  }
 
   .cover-wrap {
     position: relative;
@@ -362,9 +369,9 @@ const ICONS = {
 
   d2d: SVG('M3 5l9 7-9 7V5zm9 0l9 7-9 7V5zm0 2.83V16.17L18.3 12 12 7.83z'),
 
-  scribd: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.07 15.11c-1.78.17-3.44-.57-4.07-2.12-.44-1.09-.2-2.27.61-3.08.95-.95 2.48-1.22 3.66-.57.68.37 1.03 1.05 1.03 1.85 0 1.23-1.02 2.1-2.35 1.96-.8-.09-1.43-.63-1.43-1.37 0-.62.44-1.15 1.14-1.33.35-.09.71-.04.99.13-.07.11-.12.24-.12.38 0 .44.38.8.85.8.47 0 .85-.36.85-.8 0-1.03-.96-1.81-2.2-1.81-1.55 0-2.79 1.13-2.79 2.55 0 1.59 1.41 2.79 3.21 2.79 2.3 0 3.9-1.6 3.9-3.76 0-1.15-.47-2.22-1.32-2.95-1.02-.88-2.6-1.25-4.13-.94-1.91.4-3.31 1.84-3.56 3.7C6.2 16.48 7.72 19 10.83 19.5c.39.06.79.09 1.18.09.75 0 1.49-.12 2.19-.35a7.84 7.84 0 003.04-1.82l-.88-1.1a6.58 6.58 0 01-2.52 1.5c-.56.18-1.14.26-1.77.29z'),
+  scribd: SVG('M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1 1.5L18.5 9H15V3.5zM8 17h8v1.5H8V17zm0-3.5h8V15H8v-1.5zm0-3.5h4v1.5H8V10z'),
 
-  chirp: SVG('M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.28 8.28 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z'),
+  chirp: SVG('M12 3a9 9 0 00-9 9v5a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H5v-1a7 7 0 0114 0v1h-1a2 2 0 00-2 2v3a2 2 0 002 2h1a2 2 0 002-2v-5a9 9 0 00-9-9z'),
 
   booktopia: SVG('M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5l2-5zm0 4.24L11.1 8.5H8.76l1.87 1.43-.7 2.18 2.07-1.25 2.07 1.25-.7-2.18 1.87-1.43H12.9L12 6.24z'),
 
