@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retailer Icon Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a1a; font-family: 'Helvetica Neue', sans-serif; padding: 40px 28px; }
+  h1 { color: #666; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .subtitle { color: #3a3a3a; font-size: 10px; margin-bottom: 32px; }
+  .section { margin-bottom: 36px; }
+  .section-label { color: #444; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; border-left: 2px solid #2c2c2c; padding-left: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+  .card { background: #222; border: 1px solid #2e2e2e; border-radius: 10px; padding: 16px 10px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .card.si    { border-color: #1e2c1e; }
+  .card.custom { border-color: #2a2a2a; }
+  .card.temp  { border-color: #2c2a1e; }
+  .sizes { display: flex; align-items: center; gap: 8px; }
+  .circle { border-radius: 50%; background: #2a2a2a; border: 1px solid #333; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .lg { width: 38px; height: 38px; }
+  .sm { width: 24px; height: 24px; }
+  .sep { width: 1px; height: 18px; background: #2e2e2e; }
+  .circle svg { fill: #aaa; }
+  .circle img { display: block; filter: invert(67%); }
+  .name { color: #666; font-size: 9.5px; text-align: center; line-height: 1.3; }
+  .key  { color: #333; font-size: 8px; letter-spacing: 0.05em; }
+  .tag  { font-size: 8px; padding: 1px 5px; border-radius: 3px; }
+  .tag.si     { background: #1e2e1e; color: #4a8; }
+  .tag.custom { background: #1e1e2e; color: #66a; }
+  .tag.temp   { background: #2e2a1e; color: #a84; }
+</style>
+</head>
+<body>
+<h1>Retailer Icon Preview</h1>
+<p class="subtitle">Left: 38px · Right: 24px &nbsp;|&nbsp; <span style="color:#4a8">■</span> Simple Icons &nbsp;|&nbsp; <span style="color:#66a">■</span> Custom &nbsp;|&nbsp; <span style="color:#a84">■</span> Placeholder (awaiting brand file)</p>
+<div id="root"></div>
+
+<script>
+const CDN = s => `https://cdn.simpleicons.org/${s}/000000`;
+
+// ── SVG path strings (24×24 fill) ────────────────────────────────────────────
+const BOOK    = `<path d="M4 4a2 2 0 012-2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm10 0v3h3l-3-3zM7 9h10v1.5H7V9zm0 3h10v1.5H7V12zm0 3h6v1.5H7V15z"/>`;
+const AUDIO   = `<path d="M12 3a9 9 0 00-9 9v5a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H5v-1a7 7 0 0114 0v1h-1a2 2 0 00-2 2v3a2 2 0 002 2h1a2 2 0 002-2v-5a9 9 0 00-9-9z"/>`;
+const LIBRARY = `<path d="M2 21v-2h2V7.5L12 3l8 4.5V19h2v2H2zm4-2h2v-7H6v7zm4 0h2v-7h-2v7zm4 0h2v-7h-2v7zM5 9.5v.5h14v-.5L12 5.1 5 9.5z"/>`;
+const STORE   = `<path d="M3 9l1-5h16l1 5H3zm0 1v9h18v-9H3zm3 2h2v5H6v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5zM2 19h20v2H2v-2z"/>`;
+const FUNNEL  = `<path d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6L14 13v6.382a1 1 0 01-1.447.894l-2-1A1 1 0 0110 18v-5L3.2 5.6A1 1 0 013 5V4z"/>`;
+const TAG     = `<path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7a2 2 0 00.59 1.42l9 9A2 2 0 0013 22a2 2 0 001.42-.59l7-7A2 2 0 0022 13a2 2 0 00-.59-1.42zM6.5 8A1.5 1.5 0 115 6.5 1.5 1.5 0 016.5 8z"/>`;
+const GLOBE   = `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>`;
+// Real brand icons from Iconify (non-24×24 viewBox — browser scales correctly)
+const AMAZON_PATH = `M257.2 162.7c-48.7 1.8-169.5 15.5-169.5 117.5c0 109.5 138.3 114 183.5 43.2c6.5 10.2 35.4 37.5 45.3 46.8l56.8-56S341 288.9 341 261.4V114.3C341 89 316.5 32 228.7 32C140.7 32 94 87 94 136.3l73.5 6.8c16.3-49.5 54.2-49.5 54.2-49.5c40.7-.1 35.5 29.8 35.5 69.1m0 86.8c0 80-84.2 68-84.2 17.2c0-47.2 50.5-56.7 84.2-57.8zm136 163.5c-7.7 10-70 67-174.5 67S34.2 408.5 9.7 379c-6.8-7.7 1-11.3 5.5-8.3C88.5 415.2 203 488.5 387.7 401c7.5-3.7 13.3 2 5.5 12m39.8 2.2c-6.5 15.8-16 26.8-21.2 31c-5.5 4.5-9.5 2.7-6.5-3.8s19.3-46.5 12.7-55c-6.5-8.3-37-4.3-48-3.2c-10.8 1-13 2-14-.3c-2.3-5.7 21.7-15.5 37.5-17.5c15.7-1.8 41-.8 46 5.7c3.7 5.1 0 27.1-6.5 43.1`;
+const SCRIBD_PATH = `M19.786 28.078c0-2.828 2.094-5.25 4.724-5.74c-.125-2.635-1.234-4.438-2.958-5.792c-1.74-1.354-4.161-2.38-6.786-3.411c-2.839-1.109-4.958-2.094-4.958-4.229c0-1.802 1.557-3.156 4.182-3.156c1.599 0 2.63.245 3.161.531a.83.83 0 0 1-.12.411c-.083.161-.12.37-.12.656c0 1.807 1.307 3.406 3.651 3.406c2.135 0 3.406-1.599 3.406-3.943c0-1.969-1.109-3.693-2.922-4.885C19.213.738 16.65-.001 13.749-.001C10.744.207 8.16 1.312 6.358 2.957C4.551 4.592 3.483 6.811 3.483 9.436c0 2.917 1.031 4.807 2.708 6.245c1.682 1.438 4.104 2.464 7.021 3.49c3.161 1.021 5.01 2.083 5.01 4.182c0 2.12-1.849 3.401-4.76 3.401c-1.526 0-2.833-.255-3.943-1.016c.292-.542.292-1.089.292-1.604c0-1.521-1.344-3.422-3.688-3.422c-2.078 0-3.641 1.599-3.641 3.943c0 1.958 1.24 3.823 3.26 5.125c1.979 1.359 4.76 2.219 7.766 2.219c2.641 0 5.021-.5 6.865-1.818a4.8 4.8 0 0 1-.521-2.146zm9.73 0a3.69 3.69 0 0 1-3.703 3.698c-2 0-3.661-1.599-3.661-3.693c0-2 1.641-3.646 3.641-3.646c2.005 0 3.688 1.646 3.688 3.667z`;
+const D2D_PATH = `m480 398.1l-144-82.2v64.7h-91.3c30.8-35 81.8-95.9 111.8-149.3c35.2-62.6 16.1-123.4-12.8-153.3c-4.4-4.6-62.2-62.9-166-41.2c-59.1 12.4-89.4 43.4-104.3 67.3c-13.1 20.9-17 39.8-18.2 47.7c-5.5 33 19.4 67.1 56.7 67.1c31.7 0 57.3-25.7 57.3-57.4c0-27.1-19.7-52.1-48-56.8c1.8-7.3 17.7-21.1 26.3-24.7c41.1-17.3 78 5.2 83.3 33.5c8.3 44.3-37.1 90.4-69.7 127.6C84.5 328.1 18.3 396.8 0 415.9l336-.1V480zM369.9 371l47.1 27.2l-47.1 27.2zM134.2 161.4c0 12.4-10 22.4-22.4 22.4s-22.4-10-22.4-22.4s10-22.4 22.4-22.4s22.4 10.1 22.4 22.4M82.5 380.5c25.6-27.4 97.7-104.7 150.8-169.9c35.1-43.1 40.3-82.4 28.4-112.7c-7.4-18.8-17.5-30.2-24.3-35.7c45.3 2.1 68 23.4 82.2 38.3c0 0 42.4 48.2 5.8 113.3c-37 65.9-110.9 147.5-128.5 166.7z`;
+
+// Placeholder icons for brands with no public icon available
+const BAG     = `<path d="M19 7H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2zm-7-5a4 4 0 014 4H8a4 4 0 014-4z"/>`;
+const STAR    = `<path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z"/>`;
+const ARROWS  = `<path d="M4 12l5-5v3h6V7l5 5-5 5v-3H9v3l-5-5z"/>`;
+const PLAY    = `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>`;
+
+// ── Icon list ─────────────────────────────────────────────────────────────────
+// type: 'si'=SimpleIcons CDN  'custom'=final custom SVG  'temp'=placeholder
+const ICONS = [
+  // ── Confirmed Simple Icons ─────────────────────────────────────────────────
+  { key:'apple',       label:'Apple Books',      type:'si',     slug:'apple' },
+  { key:'audible',     label:'Audible',          type:'si',     slug:'audible' },
+  { key:'spotify',     label:'Spotify Audio',    type:'si',     slug:'spotify' },
+  { key:'kobo',        label:'Kobo',             type:'si',     slug:'rakutenkobo' },
+  { key:'googleplay',  label:'Google Play',      type:'si',     slug:'googleplay' },
+  { key:'gumroad',     label:'Gumroad',          type:'si',     slug:'gumroad' },
+  { key:'payhip',      label:'Payhip',           type:'si',     slug:'payhip' },
+  { key:'target',      label:'Target',           type:'si',     slug:'target' },
+  // ── Custom / final ─────────────────────────────────────────────────────────
+  { key:'bookfunnel',  label:'BookFunnel',        type:'img',    src:'brand-icons/bookfunnel.png' },
+  { key:'bam',         label:'Books-A-Million',  type:'brand',  vb:'25 160 112 120',
+    svg:`<path fill-rule="evenodd" d="M125.935,175.998c-9.043-12.876-26.71-13.736-36.938-13.736H27.536v114.887h63.66c7.439,0,30.792,0,39.115-15.179c4.253-7.447,4.253-19.703-0.144-27.596c-5.553-9.775-11.682-12.257-19.708-15.022c9.934-3.354,15.614-7.003,19.124-17.679C131.764,194.826,131.338,183.57,125.935,175.998 M66.817,206.054v-18.687h11.237c7.303,0,11.81,2.501,11.81,9.355c0,7.59-4.507,9.331-11.81,9.331H66.817z M66.817,252.349v-18.693h12.847c7.289,0,11.824,2.479,11.824,9.32c0,7.604-4.535,9.372-11.824,9.372H66.817z"/>` },
+  { key:'blackwells',  label:"Blackwell's",       type:'img',    src:'brand-icons/blackwells.svg' },
+  { key:'authorstore', label:'Author Store',     type:'custom', svg:STORE    },
+  { key:'libby',       label:'Libby / OverDrive', type:'img',    src:'brand-icons/libby-overdrive.svg', filter:'grayscale(1) brightness(0.67)' },
+  { key:'chirp',        label:'Chirp',            type:'img',    src:'brand-icons/chirp.webp' },
+  { key:'downpour',    label:'Downpour',         type:'img',    src:'brand-icons/downpour-icon.png', filter:'grayscale(1) brightness(1.2)' },
+  { key:'thriftbooks', label:'ThriftBooks',      type:'brand',  vb:'0 0 42 55', svg:`<path d="M12.8,17.3l2-12c.1-.4-.2-.8-.6-.9l-7.5-1.3s-.1,0-.1.1l-2.1,12.4,8.3,1.7Z"/><path d="M4.3,17.3L0,42.5s0,.1.1.1l7.5,1.4c.4,0,.7-.3.8-.7l4.2-24.6-8.3-1.4Z"/><path d="M39.2,42.4l-3.4-29.9-6.4.8.6,4.8,2.9-.3.3,2.2-2.9.3,2.7,23.6,5.7-.7c.2,0,.5-.4.5-.8Z"/><path d="M14.7,33.7l11.9.2v-1.6h-11.9v1.4Z"/><path d="M26.6,36.8v-1.6h-11.9v1.5l11.9.1Z"/><path d="M26.6,43.9v-5.5l-11.9-.4v5.9h11.9Z"/><path d="M26.6,0v31h-11.9l.1-30.7,11.8-.3Z"/>` },
+  { key:'globe',       label:'Globe (overflow)', type:'custom', svg:GLOBE    },
+  // ── Real brand icons from Iconify ─────────────────────────────────────────
+  { key:'amazon',      label:'Amazon',           type:'brand',  svg:`<path d="M2 776c3.333-5.333 8.666-5.667 16-1 166.666 96.667 348 145 544 145 130.666 0 259.666-24.333 387-73 3.333-1.333 8.166-3.333 14.5-6 6.333-2.667 10.833-4.667 13.5-6 10-4 17.833-2 23.5 6 5.666 8 3.833 15.333-5.5 22-12 8.667-27.334 18.667-46 30-57.334 34-121.334 60.333-192 79-70.667 18.667-139.667 28-207 28-104 0-202.334-18.167-295-54.5C162.333 909.167 79.333 858 6 792c-4-3.333-6-6.667-6-10 0-2 .666-4 2-6zm301-285c0-46 11.333-85.333 34-118 22.666-32.667 53.666-57.333 93-74 36-15.333 80.333-26.333 133-33 18-2 47.333-4.667 88-8v-17c0-42.667-4.667-71.333-14-86-14-20-36-30-66-30h-8c-22 2-41 9-57 21s-26.334 28.667-31 50c-2.667 13.333-9.334 21-20 23l-115-14c-11.334-2.667-17-8.667-17-18 0-2 .333-4.333 1-7 11.333-59.333 39.166-103.333 83.5-132C451.833 19.333 503.666 3.333 563 0h25c76 0 135.333 19.667 178 59a190.52 190.52 0 0 1 18.5 21.5c5.666 7.667 10.166 14.5 13.5 20.5 3.333 6 6.333 14.667 9 26 2.666 11.333 4.666 19.167 6 23.5 1.333 4.333 2.333 13.667 3 28 .666 14.333 1 22.833 1 25.5v242c0 17.333 2.5 33.167 7.5 47.5s9.833 24.667 14.5 31c4.666 6.333 12.333 16.5 23 30.5 4 6 6 11.333 6 16 0 5.333-2.667 10-8 14-55.334 48-85.334 74-90 78-8 6-17.667 6.667-29 2-9.334-8-17.5-15.667-24.5-23s-12-12.667-15-16-7.834-9.833-14.5-19.5c-6.667-9.667-11.334-16.167-14-19.5-37.334 40.667-74 66-110 76-22.667 6.667-50.667 10-84 10-51.334 0-93.5-15.833-126.5-47.5S303 549 303 491zm172-20c0 26 6.5 46.833 19.5 62.5S525 557 547 557c2 0 4.833-.333 8.5-1 3.666-.667 6.166-1 7.5-1 28-7.333 49.666-25.333 65-54 7.333-12.667 12.833-26.5 16.5-41.5 3.666-15 5.666-27.167 6-36.5.333-9.333.5-24.667.5-46v-25c-38.667 0-68 2.667-88 8-58.667 16.667-88 53.667-88 111zm420 322c1.333-2.667 3.333-5.333 6-8 16.666-11.333 32.666-19 48-23 25.333-6.667 50-10.333 74-11 6.666-.667 13-.333 19 1 30 2.667 48 7.667 54 15 2.666 4 4 10 4 18v7c0 23.333-6.334 50.833-19 82.5-12.667 31.667-30.334 57.167-53 76.5-3.334 2.667-6.334 4-9 4-1.334 0-2.667-.333-4-1-4-2-5-5.667-3-11 24.666-58 37-98.333 37-121 0-7.333-1.334-12.667-4-16-6.667-8-25.334-12-56-12-11.334 0-24.667.667-40 2-16.667 2-32 4-46 6-4 0-6.667-.667-8-2-1.334-1.333-1.667-2.667-1-4 0-.667.333-1.667 1-3z"/>`, vb:'0 -50 1100 1100' },
+  { key:'bn',          label:'Barnes & Noble',   type:'brand',  vb:'0 0 64 64',
+    svg:`<path d="M42.2,30.1c0.3,5.7,0.4,7.3,0.4,12.2v10.7h-7.1V11h7.1c0,0,3.4,12.3,4.1,15c0.8,2.6,1.3,4.9,1.7,6.6c-0.2-4.1-0.3-9.2-0.3-13.4v-8.3H55v42h-6.4c0,0-3.9-13-4.7-15.5C43.3,35.5,42.8,33.2,42.2,30.1z"/><path d="M22.9,30.6c3.4-0.2,5.4-2.9,5.4-8.1c0-7.2-2-11.6-9.5-11.6H9v42.1h9.8c6.7,0,10.7-3.2,10.7-11.9C29.5,34.3,26.7,30.6,22.9,30.6z M16.5,15.8h1.4c2.5,0,3,1.8,3,6.7c0,3.6-0.4,5.4-2.5,5.4h-1.9V15.8z M18.5,48.1h-1.9V33.2h1.8c2.4,0,3,2.3,3,7C21.4,46.7,20.8,48.1,18.5,48.1z"/>` },
+  { key:'walmart',     label:'Walmart',          type:'brand',  vb:'0 0 48 48', stroke:true,
+    svg:`<line x1="24" y1="15.42" x2="24" y2="4.5"/><line x1="31.41" y1="19.7" x2="40.87" y2="14.24"/><line x1="31.41" y1="28.26" x2="40.87" y2="33.72"/><line x1="24" y1="32.58" x2="24" y2="43.5"/><line x1="16.59" y1="28.26" x2="7.13" y2="33.72"/><line x1="16.59" y1="19.7" x2="7.13" y2="14.24"/>` },
+  { key:'scribd',      label:'Scribd/Everand',   type:'brand',  svg:`<path d="${SCRIBD_PATH}"/>`, vb:'0 0 32 32' },
+  { key:'storytel',    label:'Storytel',         type:'brand',  vb:'-1.62 -70.34 743.10309931 869.74',
+    svg:`<path d="m710.06 382.67c30.35-166.61-71.06-315.65-229.85-365.14-282.04-87.87-481.83 170.68-479.55 431.27 1.9 210.57 46.91 350.57 46.94 350.6-1.99-6.23 53.28-35.39 59.66-38.66 5.43-2.76 10.95-5.4 16.5-7.95s11.13-4.98 16.79-7.3c5.64-2.34 11.34-4.53 17.06-6.64 5.73-2.11 11.51-4.09 17.3-5.99 47.53-15.85 96.75-25.81 145.56-36.73 152.62-34.86 316.54-100.78 374.93-259.26a323.894 323.894 0 0 0 14.63-54.2z"/>` },
+  { key:'smashwords',  label:'Smashwords',       type:'img',    src:'brand-icons/smashwords.png' },
+  { key:'d2d',         label:'Draft2Digital',    type:'brand',  svg:`<path d="${D2D_PATH}"/>`, vb:'0 0 480 512' },
+  { key:'booktopia',   label:'Booktopia',        type:'img',    src:'brand-icons/booktopia.png' },
+  { key:'waterstones', label:'Waterstones',       type:'custom', svg:`<path d="M2 3 L5 21 L9 21 L12 9 L15 21 L19 21 L22 3 L19 3 L16.5 20 L12 14 L7.5 20 L5 3 Z"/>` },
+  { key:'librofm',     label:'Libro.fm',         type:'custom',
+    svg:`<path d="M4.5 6 Q4.5 3 12 3 Q19.5 3 19.5 6 L19.5 14 Q17 20.5 12 22.5 Q7 20.5 4.5 14 Z"/>
+<circle cx="12" cy="12" r="1" fill="#2a2a2a"/>
+<path fill="none" stroke="#2a2a2a" stroke-width="1.5" d="M9.5 12 A2.5 2.5 0 0 0 14.5 12"/>
+<path fill="none" stroke="#2a2a2a" stroke-width="1.5" d="M7.5 12 A4.5 4.5 0 0 0 16.5 12"/>
+<path fill="none" stroke="#2a2a2a" stroke-width="1.5" d="M5.5 12 A6.5 6.5 0 0 0 18.5 12"/>` },
+  { key:'bookshop',    label:'Bookshop.org',     type:'brand',  vb:'0 0 192 163',
+    svg:`<path fill-rule="evenodd" d="M175.3,130.7c-2.2,2.8-5,5.2-8,7c-0.9,0.5-1.9,1-2.8,1.4c-7.1,2.7-14.7,2.8-22.3,2.8H97.7h-7.8H43c-2.4,0-4.4-2-4.4-4.4v-3.6v-9v-11.6v-11.5v-8.7c0-1.8-0.3-3.8,0.7-5.4c0.8-1.3,2.2-2.2,3.7-2.2h93.9c5.9,0,11.8-0.1,17.7,0.4c6,0.6,11.7,2.8,16.5,6.3c1.6,1.3,3.1,2.7,4.3,4.3c4,4.7,6.6,10.7,6.7,16.9C182,119.9,179.4,125.9,175.3,130.7 M38.6,60.6V48.8V36.6v-9.5v-3.6c0-2.4,2-4.4,4.4-4.4h105c7.4-0.2,14.7,1.7,21.1,5.5c5.9,3.9,10.2,9.8,12.3,16.5c0.6,2.1,1.1,4.3,1,6.6c-0.1,6.1-2.7,11.9-6.8,16.5c-2.2,2.8-5,5.1-8.1,6.9c-7,3.3-14.6,4.1-22.3,4.1h-2.9H43c-2.7,0-4.4-2.4-4.4-4.9C38.5,67.1,38.6,63.9,38.6,60.6 M191.5,108.6c-0.4-2.8-1.1-5.5-2.2-8.1c-1-2.6-2.3-5.1-3.8-7.4c-1.6-2.3-3.5-4.4-5.5-6.3c-1.2-1.1-2.5-2.1-3.8-3.1l-2.2-1.6c-0.7-0.6-1.5-1-2.2-1.6c2.6-1.7,5.2-3.5,7.6-5.5c2.1-1.8,3.9-3.8,5.5-6.1c1.6-2.2,2.9-4.6,4-7.2c0.9-2.1,1.6-4.2,2.1-6.4c0.8-4.4,0.9-9.1,0.2-13.5c-0.3-1.9-0.7-3.8-1.3-5.6c-1.2-3.7-3-7.2-5.3-10.3c-1-1.3-2-2.5-3.1-3.7c-2.9-3-6.2-5.6-9.8-7.5c-2.4-1.5-4.9-2.6-7.5-3.5c-6.7-1.7-13.6-2.5-20.5-2.3c0,0-121.2,0-131.5,0c-1,0-1.8,0.8-1.8,1.8v6.4c0,1.8,1.8,1.9,3.2,1.9h6.1c0,0,3.8,0,5.1,0c2.4,0,4.4,1.9,4.4,4.4c0,0.7,0,2.2,0,2.9c0,0.8,0,1.6,0,2.4c0,10.5,0,42.1,0,42.1c0,1.2-0.5,2.4-1.4,3.2c-0.4,0.4-1,0.7-1.5,0.9c-0.7,0.3-1.4,0.3-2.1,0.3c-3.6,0-7.1,0.1-10.7,0.1c-0.6,0-1.3,0-1.8,0.1c-0.5,0.2-0.9,0.5-1.2,1c-0.2,0.5-0.2,1-0.2,1.5c0,0.9,0,1.7,0,2.6s-0.1,1.9,0,2.8c0,0.4,0.1,0.8,0.3,1.2c0.3,0.7,1.1,0.9,1.8,0.9h4.7h6.8c1.4,0,2.8,0.2,3.9,1.2c1.3,1.2,1.4,2.8,1.4,4.4c0,1.5,0,3,0,4.6c0,2.3,0,4.6,0,6.8v2.1v10.1v5.9v11v5.8c0,2.4-2,4.4-4.4,4.4h-7.7c-0.9,0-2.7,0-3.6,0c-0.5,0-1,0-1.3,0c-0.6,0-0.9,0.1-1.3,0.4c-0.3,0.2-0.5,0.6-0.5,1c0,0.2,0,0.6,0,0.8v6.1c0,0.4,0.1,0.8,0.4,1.1c0.6,0.5,1.2,0.6,2,0.6h46.4h54.9c11.3,0,22.4-0.1,33.7,0c3.3,0,6.9-0.1,10.2-0.6c2.2-0.3,4.4-0.8,6.5-1.5c2.6-0.9,5.1-2,7.4-3.4c3.6-2,6.9-4.6,9.8-7.7c5.4-5.9,9.1-13.2,9.9-21.2C191.9,114.6,191.9,111.6,191.5,108.6"/>` },
+  { key:'hoopla',      label:'Hoopla',           type:'img',    src:'brand-icons/hoopla.png' },
+];
+
+const root = document.getElementById('root');
+
+function makeCard(icon) {
+  const card = document.createElement('div');
+  card.className = `card ${icon.type}`;
+
+  function circle(size, inner) {
+    return `<div class="circle ${size}">${inner}</div>`;
+  }
+
+  let lgIn, smIn;
+  if (icon.type === 'si') {
+    const url = CDN(icon.slug);
+    lgIn = `<img src="${url}" width="20" height="20" alt="${icon.label}">`;
+    smIn = `<img src="${url}" width="13" height="13" alt="${icon.label}">`;
+  } else if (icon.type === 'img') {
+    const fs = icon.nofilter ? ' style="filter:none"' : icon.filter ? ` style="filter:${icon.filter}"` : '';
+    lgIn = `<img src="${icon.src}" width="20" height="20" alt="${icon.label}"${fs}>`;
+    smIn = `<img src="${icon.src}" width="13" height="13" alt="${icon.label}"${fs}>`;
+  } else {
+    const vb    = icon.vb || '0 0 24 24';
+    const extra = icon.stroke ? ' fill="none" stroke="#aaa" stroke-width="4" stroke-linecap="round"' : '';
+    lgIn = `<svg viewBox="${vb}" width="20" height="20" xmlns="http://www.w3.org/2000/svg"${extra}>${icon.svg}</svg>`;
+    smIn = `<svg viewBox="${vb}" width="13" height="13" xmlns="http://www.w3.org/2000/svg"${extra}>${icon.svg}</svg>`;
+  }
+
+  const tagMap = { si:'si', brand:'si', img:'si', custom:'custom', temp:'temp' };
+  const tagLabel = (icon.type === 'si' || icon.type === 'brand' || icon.type === 'img') ? 'brand' : icon.type === 'temp' ? 'placeholder' : 'custom';
+
+  card.innerHTML = `
+    <div class="sizes">
+      ${circle('lg', lgIn)}
+      <div class="sep"></div>
+      ${circle('sm', smIn)}
+    </div>
+    <div class="name">${icon.label}</div>
+    <div class="key">${icon.key}</div>
+    <span class="tag ${tagMap[icon.type]}">${tagLabel}</span>
+  `;
+  return card;
+}
+
+function section(title, filter) {
+  const items = ICONS.filter(filter);
+  if (!items.length) return;
+  const sec = document.createElement('div');
+  sec.className = 'section';
+  sec.innerHTML = `<div class="section-label">${title}</div>`;
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  items.forEach(i => grid.appendChild(makeCard(i)));
+  sec.appendChild(grid);
+  root.appendChild(sec);
+}
+
+section('Brand icons — confirmed', i => i.type === 'si' || i.type === 'brand' || i.type === 'img');
+section('Custom semantic icons (final)', i => i.type === 'custom');
+section('Placeholders — drop SVG files from svgrepo.com into brand-icons/ to replace', i => i.type === 'temp');
+</script>
+</body>
+</html>
