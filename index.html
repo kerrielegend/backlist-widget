@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Author Backlist Widget</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a1a;
+    font-family: 'Georgia', serif;
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  }
+  @media (max-width: 400px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Book card */
+  .book-card { display: flex; flex-direction: column; }
+
+  .cover-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 3px;
+    box-shadow: 4px 6px 20px rgba(0,0,0,0.6);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .book-card:hover .cover-wrap {
+    transform: translateY(-4px);
+    box-shadow: 6px 12px 28px rgba(0,0,0,0.8);
+  }
+  .cover-wrap img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .cover-placeholder {
+    width: 100%; height: 100%; background: #242424;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #3a3a3a; letter-spacing: 0.1em;
+    text-transform: uppercase; font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  /* New Release badge */
+  .badge-new {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: #c8a96e;
+    color: #1a1a1a;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 3px;
+  }
+
+  /* Retailer icon row */
+  .retailer-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+
+  .retailer-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #252525;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+    text-decoration: none;
+    max-width: 40px;
+    margin: 0 auto;
+  }
+  .retailer-btn:hover { background: #333; transform: scale(1.1); }
+  .retailer-btn svg { width: 15px; height: 15px; fill: #aaa; flex-shrink: 0; }
+  .retailer-btn--globe svg { fill: #777; }
+  .retailer-btn--empty {
+    background: transparent;
+    border-color: #252525;
+    cursor: default;
+    pointer-events: none;
+  }
+  .retailer-btn--empty svg { fill: #2e2e2e; }
+
+  @media (max-width: 600px) {
+    .retailer-btn { max-width: 34px; }
+    .retailer-btn svg { width: 13px; height: 13px; }
+  }
+
+  /* Lightbox shared */
+  .lb-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .lb-overlay.active { display: flex; }
+
+  .lb-panel {
+    background: #222;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .lb-close {
+    position: absolute;
+    top: 16px; right: 18px;
+    background: #303030;
+    border: none;
+    color: #888;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    z-index: 1;
+  }
+  .lb-close:hover { background: #3c3c3c; color: #eee; }
+
+  /* Book lightbox */
+  #bookLightbox { padding: 28px 24px 40px; }
+
+  .book-lb-inner {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .book-lb-cover {
+    width: 100px;
+    flex-shrink: 0;
+    aspect-ratio: 2 / 3;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 4px 6px 16px rgba(0,0,0,0.5);
+  }
+  .book-lb-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+  .book-lb-details { flex: 1; min-width: 0; padding-top: 2px; }
+
+  .book-lb-series {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 5px;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+  .book-lb-title {
+    font-size: 19px;
+    color: #f0ece4;
+    line-height: 1.2;
+    margin-bottom: 3px;
+    font-style: italic;
+  }
+  .book-lb-author {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 14px;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+  .book-lb-blurb {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.7;
+    font-family: 'Helvetica Neue', sans-serif;
+    margin-bottom: 20px;
+  }
+
+  .book-lb-btns {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .lb-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 20px;
+    background: #2c2c2c;
+    border: 1px solid #383838;
+    color: #bbb;
+    font-size: 12px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    transition: background 0.15s;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .lb-pill:hover { background: #383838; color: #eee; }
+  .lb-pill svg { width: 13px; height: 13px; fill: #888; flex-shrink: 0; }
+  .lb-pill--more {
+    background: #222;
+    border-color: #2c2c2c;
+    color: #666;
+  }
+  .lb-pill--more:hover { background: #2c2c2c; color: #999; }
+
+  /* Globe / more stores lightbox */
+  #globeLightbox { padding: 24px 20px 36px; }
+
+  .globe-lb-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding-right: 36px;
+  }
+  .globe-lb-icon {
+    width: 40px; height: 40px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .globe-lb-icon svg { width: 18px; height: 18px; fill: #777; }
+  .globe-lb-book { font-size: 15px; color: #e0dcd4; font-style: italic; line-height: 1.2; margin-bottom: 3px; }
+  .globe-lb-sub {
+    font-size: 10px; color: #555;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  .globe-lb-list { display: flex; flex-direction: column; gap: 7px; }
+
+  .globe-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    background: #272727;
+    border: 1px solid #303030;
+    color: #bbb;
+    font-size: 13px;
+    font-family: 'Helvetica Neue', sans-serif;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .globe-row:hover { background: #303030; color: #eee; }
+  .globe-row svg { width: 16px; height: 16px; fill: #777; flex-shrink: 0; }
+  .globe-row span { flex: 1; }
+  .globe-row-arrow { color: #3a3a3a; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="grid" id="bookGrid"></div>
+
+<!-- Book lightbox -->
+<div class="lb-overlay" id="bookOverlay">
+  <div class="lb-panel" id="bookLightbox">
+    <button class="lb-close" id="bookClose">×</button>
+    <div class="book-lb-inner">
+      <div class="book-lb-cover"><img id="blCover" src="" alt=""></div>
+      <div class="book-lb-details">
+        <div class="book-lb-series" id="blSeries"></div>
+        <div class="book-lb-title"  id="blTitle"></div>
+        <div class="book-lb-author" id="blAuthor"></div>
+        <div class="book-lb-blurb"  id="blBlurb"></div>
+        <div class="book-lb-btns"   id="blBtns"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Globe / More Stores lightbox -->
+<div class="lb-overlay" id="globeOverlay">
+  <div class="lb-panel" id="globeLightbox">
+    <button class="lb-close" id="globeClose">×</button>
+    <div class="globe-lb-header">
+      <div class="globe-lb-icon" id="globeIconWrap"></div>
+      <div>
+        <div class="globe-lb-book" id="globeTitle"></div>
+        <div class="globe-lb-sub">More places to buy</div>
+      </div>
+    </div>
+    <div class="globe-lb-list" id="globeList"></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Icon registry — Simple Icons paths for major brands, semantic SVG for others
+// ---------------------------------------------------------------------------
+const SVG = (path, vb) =>
+  `<svg viewBox="${vb || '0 0 24 24'}" xmlns="http://www.w3.org/2000/svg"><path d="${path}"/></svg>`;
+
+const ICONS = {
+  amazon: SVG('M13.958 10.09c0 1.232.029 2.256-.591 3.351-.502.891-1.301 1.438-2.186 1.438-1.214 0-1.922-.924-1.922-2.292 0-2.692 2.415-3.182 4.699-3.182v.685zm3.186 7.705c-.209.189-.512.201-.745.074-1.047-.872-1.234-1.276-1.814-2.106-1.734 1.768-2.962 2.297-5.209 2.297-2.66 0-4.731-1.641-4.731-4.925 0-2.565 1.391-4.309 3.37-5.164 1.715-.754 4.11-.891 5.942-1.095v-.41c0-.753.06-1.642-.384-2.294-.385-.579-1.124-.82-1.775-.82-1.205 0-2.277.618-2.54 1.897-.054.285-.261.567-.549.582l-3.061-.333c-.259-.056-.546-.267-.472-.664C5.57 1.779 8.645.5 11.389.5c1.406 0 3.24.374 4.346 1.437 1.406 1.312 1.271 3.064 1.271 4.971v4.5c0 1.352.561 1.947 1.089 2.677.187.261.228.574-.009.769l-2.942 2.941zM20.5 18.5c-4.5 3.364-11.03 5.15-16.643 2.736C2.028 20.389.5 19.145.5 19.145c-.241-.194-.027-.459.261-.308 4.791 2.793 10.715 3.567 15.836 1.95.693-.216 1.279.454.903.713z'),
+
+  bn: SVG('M3 2h10.387c2.432 0 4.148 1.62 4.148 3.85 0 1.735-.96 3.04-2.458 3.61v.055c1.863.46 3.023 1.9 3.023 3.83C18.1 16.1 16.2 18 13.3 18H3V2zm3.2 6.26h6.57c.96 0 1.63-.65 1.63-1.6 0-.94-.67-1.57-1.63-1.57H6.2v3.17zm0 6.84h7.01c1.07 0 1.82-.72 1.82-1.74 0-1.01-.75-1.72-1.82-1.72H6.2v3.46z'),
+
+  apple: SVG('M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z'),
+
+  kobo: SVG('M4 3v18h3.5v-5.83l1.78-1.76L13.61 21H18l-6.32-10 5.78-5.68h-4.43L4 12.42V3zm14.18 2.43c-.99 0-1.79.8-1.79 1.79s.8 1.79 1.79 1.79 1.79-.8 1.79-1.79-.8-1.79-1.79-1.79zm3.04 4.14h-1.74A5.56 5.56 0 0124 15.14 5.56 5.56 0 0118.44 20.7a5.56 5.56 0 01-5.56-5.56c0-.25.02-.49.05-.73h-1.74c-.03.24-.04.48-.04.73a7.3 7.3 0 007.29 7.29A7.3 7.3 0 0024 15.14c0-.25-.01-.49-.04-.73l-.74.16z'),
+
+  googleplay: SVG('M3.61 1.814L13.79 12 3.61 22.186a1 1 0 01-.61-.92V2.734a1 1 0 01.61-.92zm10.89 10.893l2.3 2.3-10.94 6.34 8.64-8.64zm3.2-1.847a1 1 0 010 1.28L15.4 14l-2.3-2.3 2.3-2.3 2.3 1.46zM5.86 2.658L16.8 8.99l-2.3 2.3-8.64-8.63z'),
+
+  audible: SVG('M12 1C5.925 1 1 5.925 1 12c0 4.1 2.2 7.7 5.5 9.7V23h1v-2h7v2h1v-1.3c3.3-2 5.5-5.6 5.5-9.7 0-6.075-4.925-11-11-11zm0 3c4.4 0 8 3.6 8 8 0 3.3-2 6.2-4.9 7.6-.2-1.1-1.1-2-2.3-2h-1.6c-1.2 0-2.1.9-2.3 2C6 18.2 4 15.3 4 12c0-4.4 3.6-8 8-8zm-2 8v4h4v-4h-1v3h-2v-3h-1zm-3-3v6h1V9H7zm8 0v6h1V9h-1zm-4-2a1 1 0 100 2 1 1 0 000-2z'),
+
+  spotify: SVG('M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.94-1.38-.48.12-1.02-.12-1.14-.6-.12-.48.12-1.02.6-1.14C9.6 9.9 15 10.56 18.72 12.84c.36.18.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z'),
+
+  gumroad: SVG('M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm1.5 17.4c-3.37 0-5.7-2.33-5.7-5.4 0-3.17 2.44-5.4 5.6-5.4 1.87 0 3.17.68 4.07 1.66l-1.44 1.48c-.65-.68-1.44-1.15-2.63-1.15-1.91 0-3.28 1.48-3.28 3.42 0 2.02 1.37 3.42 3.28 3.42 1.33 0 2.05-.5 2.52-1.04v-1.05h-2.52V11.56h4.5v4.18c-.97 1.04-2.52 1.66-4.4 1.66z'),
+
+  bookfunnel: SVG('M4 4h16v2H4V4zm2 3h12l-2.5 4.5H8.5L6 7zm2.5 5l3 5 3-5h-6zm3 5v4h-2v-4h2z'),
+
+  bookshop: SVG('M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm6 2L7 7v10l5-3 5 3V7l-5-3z'),
+
+  payhip: SVG('M20 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM4 5h16a4 4 0 014 4v9a4 4 0 01-4 4H4a4 4 0 01-4-4V9a4 4 0 014-4zm6 4v6l5-3-5-3z'),
+
+  librofm: SVG('M12 3a9 9 0 100 18A9 9 0 0012 3zm0 2a7 7 0 110 14A7 7 0 0112 5zm-1 2v2H9v2h2v4h2v-4h2v-2h-2V7h-2zm1-4a1.5 1.5 0 100 3 1.5 1.5 0 000-3z'),
+
+  bam: SVG('M4 3h16v2H4V3zm1 4h14a1 1 0 011 1v11a1 1 0 01-1 1H5a1 1 0 01-1-1V8a1 1 0 011-1zm2 2v3h4V9H7zm0 5v2h10v-2H7zm6-5v3h3V9h-3z'),
+
+  smashwords: SVG('M6 4h12l2 3H4l2-3zm-3 5h18v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9zm5 2v6l6-3-6-3z'),
+
+  d2d: SVG('M3 5l9 7-9 7V5zm9 0l9 7-9 7V5zm0 2.83V16.17L18.3 12 12 7.83z'),
+
+  scribd: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.07 15.11c-1.78.17-3.44-.57-4.07-2.12-.44-1.09-.2-2.27.61-3.08.95-.95 2.48-1.22 3.66-.57.68.37 1.03 1.05 1.03 1.85 0 1.23-1.02 2.1-2.35 1.96-.8-.09-1.43-.63-1.43-1.37 0-.62.44-1.15 1.14-1.33.35-.09.71-.04.99.13-.07.11-.12.24-.12.38 0 .44.38.8.85.8.47 0 .85-.36.85-.8 0-1.03-.96-1.81-2.2-1.81-1.55 0-2.79 1.13-2.79 2.55 0 1.59 1.41 2.79 3.21 2.79 2.3 0 3.9-1.6 3.9-3.76 0-1.15-.47-2.22-1.32-2.95-1.02-.88-2.6-1.25-4.13-.94-1.91.4-3.31 1.84-3.56 3.7C6.2 16.48 7.72 19 10.83 19.5c.39.06.79.09 1.18.09.75 0 1.49-.12 2.19-.35a7.84 7.84 0 003.04-1.82l-.88-1.1a6.58 6.58 0 01-2.52 1.5c-.56.18-1.14.26-1.77.29z'),
+
+  chirp: SVG('M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.28 8.28 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z'),
+
+  booktopia: SVG('M12 2l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5l2-5zm0 4.24L11.1 8.5H8.76l1.87 1.43-.7 2.18 2.07-1.25 2.07 1.25-.7-2.18 1.87-1.43H12.9L12 6.24z'),
+
+  waterstones: SVG('M4 20L7.5 4h1L12 16.5 15.5 4h1L20 20h-2l-2.8-10.5L12 20h-1l-3.2-10.5L5 20H4z'),
+
+  blackwells: SVG('M5 2h9l5 5v15H5V2zm2 2v16h10V8l-4-4H7zm1 5h8v1H8V9zm0 2h8v1H8v-1zm0 2h5v1H8v-1z'),
+
+  authorstore: SVG('M12 2L2 7v2h20V7L12 2zm-8 9v8H5v-8H4zm4 0v8h2v-8H8zm4 0v8h2v-8h-2zm4 0v8h1v-8h-1zm3 10H3v2h18v-2z'),
+
+  libby: SVG('M12 2a3 3 0 110 6 3 3 0 010-6zm-1 8h2v2.5l4 1.5-1 2.5-3-1.1V20h-4v-4.6L6 16.5 5 14l4-1.5V10z'),
+
+  hoopla: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-3.5 4h7l-3.5 6-3.5-6zm3.5 4l1.5 3h-3l1.5-3zm0 4v3h-1v-3h1z'),
+
+  downpour: SVG('M12 2a7 7 0 017 7c0 3-1.7 5.5-4.2 6.8L16 22h-1.5l-1-3h-3l-1 3H8l1.2-6.2C6.7 14.5 5 12 5 9a7 7 0 017-7zm-2 13l.5 2h3l.5-2h-4zm2-11a5 5 0 00-5 5 5 5 0 005 5 5 5 0 005-5 5 5 0 00-5-5z'),
+
+  storytel: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'),
+
+  walmart: SVG('M11.25 2.5v6h-2v-6h2zm3.5 0v6H13v-6h1.75zm-9.75 7h6v-2h-6v2zm13.5 0h6v-2h-6v2zm-7.75 4.75v6h-2v-6h2zm3.5 0v6H13v-6h1.75zm-9.75-2.5h6v2h-6v-2zm13.5 0h6v2h-6v-2z'),
+
+  target: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8zm0 3a5 5 0 100 10A5 5 0 0012 7zm0 2a3 3 0 110 6 3 3 0 010-6zm0 2a1 1 0 100 2 1 1 0 000-2z'),
+
+  thriftbooks: SVG('M6 2h12a1 1 0 011 1v18a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1zm1 2v16h10V4H7zm2 2h6v1H9V6zm0 2h6v1H9V8zm0 2h4v1H9v-1zm5 3l-4 2.5V13h4v2z'),
+
+  globe: SVG('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'),
+};
+
+// ---------------------------------------------------------------------------
+// Retailer metadata: widget_key → { label, icon }
+// ---------------------------------------------------------------------------
+const RETAILERS = {
+  amazon:      { label: 'Amazon',            icon: ICONS.amazon },
+  bn:          { label: 'Barnes & Noble',    icon: ICONS.bn },
+  apple:       { label: 'Apple Books',       icon: ICONS.apple },
+  kobo:        { label: 'Kobo',              icon: ICONS.kobo },
+  googleplay:  { label: 'Google Play',       icon: ICONS.googleplay },
+  audible:     { label: 'Audible',           icon: ICONS.audible },
+  bookfunnel:  { label: 'BookFunnel',        icon: ICONS.bookfunnel },
+  bookshop:    { label: 'Bookshop.org',      icon: ICONS.bookshop },
+  payhip:      { label: 'Payhip',            icon: ICONS.payhip },
+  gumroad:     { label: 'Gumroad',           icon: ICONS.gumroad },
+  librofm:     { label: 'Libro.fm',          icon: ICONS.librofm },
+  bam:         { label: 'Books-A-Million',   icon: ICONS.bam },
+  smashwords:  { label: 'Smashwords',        icon: ICONS.smashwords },
+  d2d:         { label: 'Draft2Digital',     icon: ICONS.d2d },
+  scribd:      { label: 'Scribd / Everand',  icon: ICONS.scribd },
+  spotify:     { label: 'Spotify Audio',     icon: ICONS.spotify },
+  chirp:       { label: 'Chirp',             icon: ICONS.chirp },
+  booktopia:   { label: 'Booktopia',         icon: ICONS.booktopia },
+  waterstones: { label: 'Waterstones',       icon: ICONS.waterstones },
+  blackwells:  { label: "Blackwell's",       icon: ICONS.blackwells },
+  authorstore: { label: 'Author Store',      icon: ICONS.authorstore },
+  libby:       { label: 'Libby / OverDrive', icon: ICONS.libby },
+  hoopla:      { label: 'Hoopla',            icon: ICONS.hoopla },
+  downpour:    { label: 'Downpour',          icon: ICONS.downpour },
+  storytel:    { label: 'Storytel',          icon: ICONS.storytel },
+  walmart:     { label: 'Walmart',           icon: ICONS.walmart },
+  target:      { label: 'Target',            icon: ICONS.target },
+  thriftbooks: { label: 'ThriftBooks',       icon: ICONS.thriftbooks },
+};
+
+// Priority order — first 3 available fill icon slots; rest go to globe lightbox
+const PRIORITY = [
+  'amazon','bn','apple','kobo','googleplay','audible',
+  'bookfunnel','bookshop','payhip','gumroad','librofm',
+  'bam','smashwords','d2d','scribd','spotify','chirp',
+  'booktopia','waterstones','blackwells','authorstore',
+  'libby','hoopla','downpour','storytel','walmart','target','thriftbooks',
+];
+
+// ---------------------------------------------------------------------------
+// Sample data — replace with API fetch when Notion integration is ready
+// ---------------------------------------------------------------------------
+const books = [
+  {
+    cover: 'https://covers.openlibrary.org/b/id/8739161-L.jpg',
+    title: 'The Name of the Wind',
+    series: 'Kingkiller Chronicle',
+    seriesNumber: 1,
+    author: 'Patrick Rothfuss',
+    blurb: "Told in Kvothe's own voice, this is the tale of the magically gifted young man who grows to be the most notorious wizard his world has ever seen.",
+    links: { amazon: '#', apple: '#', kobo: '#', bookshop: '#', libby: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/10295050-L.jpg',
+    title: 'The Wise Man\'s Fear',
+    series: 'Kingkiller Chronicle',
+    seriesNumber: 2,
+    author: 'Patrick Rothfuss',
+    blurb: 'Kvothe takes a break from his studies at the University to pursue tales of Amyr, the Chandrian, and the Sithe.',
+    links: { amazon: '#', bn: '#', apple: '#', audible: '#', hoopla: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/8228169-L.jpg',
+    title: 'A Wizard of Earthsea',
+    series: 'Earthsea Cycle',
+    seriesNumber: 1,
+    author: 'Ursula K. Le Guin',
+    blurb: 'A boy with unusual power is sent to a school for wizards, where he unleashes a terrible shadow upon the world.',
+    links: { amazon: '#', apple: '#', scribd: '#', libby: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/10527843-L.jpg',
+    title: 'The Left Hand of Darkness',
+    series: 'Hainish Cycle',
+    seriesNumber: 4,
+    author: 'Ursula K. Le Guin',
+    blurb: 'A lone human emissary travels to a planet where humans have no fixed gender.',
+    links: { amazon: '#', bn: '#', apple: '#', kobo: '#', audible: '#', bookshop: '#', libby: '#', hoopla: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/9255566-L.jpg',
+    title: 'Piranesi',
+    series: null,
+    seriesNumber: null,
+    author: 'Susanna Clarke',
+    blurb: 'Piranesi lives in a house of infinite halls and tidal statues. He believes himself to be one of only two people in the world.',
+    newRelease: true,
+    links: { amazon: '#', apple: '#', audible: '#', bookfunnel: '#', payhip: '#', gumroad: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/7890198-L.jpg',
+    title: 'Mistborn',
+    series: 'Mistborn Era 1',
+    seriesNumber: 1,
+    author: 'Brandon Sanderson',
+    blurb: 'A street thief discovers extraordinary powers in a world where ash falls from the sky—and joins a heist to overthrow the immortal Lord Ruler.',
+    links: { amazon: '#', bn: '#', kobo: '#', booktopia: '#', waterstones: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/8236508-L.jpg',
+    title: 'The Well of Ascension',
+    series: 'Mistborn Era 1',
+    seriesNumber: 2,
+    author: 'Brandon Sanderson',
+    blurb: 'The Lord Ruler is dead, but a new darkness is rising as three armies surround the city Elend Venture rules.',
+    links: { amazon: '#', kobo: '#', chirp: '#', storytel: '#' }
+  },
+  {
+    cover: 'https://covers.openlibrary.org/b/id/8739052-L.jpg',
+    title: 'The Shadow of the Wind',
+    series: null,
+    seriesNumber: null,
+    author: 'Carlos Ruiz Zafón',
+    blurb: 'A young boy discovers a mysterious book in post-war Barcelona, launching a decades-long search for its author.',
+    links: { amazon: '#', bn: '#', apple: '#', kobo: '#', googleplay: '#', scribd: '#', libby: '#' }
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Sort: series (by name → number) then standalones (by pubDate → title)
+// ---------------------------------------------------------------------------
+function sortBooks(list) {
+  const series = list.filter(b => b.series);
+  const standalones = list.filter(b => !b.series);
+
+  series.sort((a, b) => {
+    const s = a.series.localeCompare(b.series);
+    if (s !== 0) return s;
+    return (a.seriesNumber || 0) - (b.seriesNumber || 0);
+  });
+
+  return [...series, ...standalones];
+}
+
+// ---------------------------------------------------------------------------
+// Determine which retailer keys fill slots 1–3 and which go to globe lightbox
+// ---------------------------------------------------------------------------
+function getSlots(book) {
+  const available = PRIORITY.filter(k => book.links && book.links[k]);
+  return { primary: available.slice(0, 3), overflow: available.slice(3) };
+}
+
+// ---------------------------------------------------------------------------
+// Build a single book card
+// ---------------------------------------------------------------------------
+function buildCard(book) {
+  const { primary, overflow } = getSlots(book);
+
+  const card = document.createElement('div');
+  card.className = 'book-card';
+
+  // Cover
+  const coverWrap = document.createElement('div');
+  coverWrap.className = 'cover-wrap';
+
+  if (book.cover) {
+    const img = document.createElement('img');
+    img.src = book.cover;
+    img.alt = book.title;
+    img.onerror = function () {
+      this.replaceWith(makePlaceholder());
+    };
+    coverWrap.appendChild(img);
+  } else {
+    coverWrap.appendChild(makePlaceholder());
+  }
+
+  if (book.newRelease) {
+    const badge = document.createElement('div');
+    badge.className = 'badge-new';
+    badge.textContent = 'New';
+    coverWrap.appendChild(badge);
+  }
+
+  coverWrap.addEventListener('click', () => openBookLightbox(book));
+
+  // Retailer row: 3 dynamic slots + globe
+  const row = document.createElement('div');
+  row.className = 'retailer-row';
+
+  for (let i = 0; i < 3; i++) {
+    const key = primary[i];
+    if (key) {
+      const r = RETAILERS[key];
+      const a = document.createElement('a');
+      a.className = 'retailer-btn';
+      a.href = book.links[key];
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.title = r.label;
+      a.setAttribute('aria-label', r.label);
+      a.innerHTML = r.icon;
+      a.addEventListener('click', e => e.stopPropagation());
+      row.appendChild(a);
+    } else {
+      // Empty placeholder slot
+      const empty = document.createElement('div');
+      empty.className = 'retailer-btn retailer-btn--empty';
+      empty.innerHTML = SVG('M12 12m-1 0a1 1 0 102 0 1 1 0 10-2 0'); // tiny dot
+      row.appendChild(empty);
+    }
+  }
+
+  // Globe slot (always visible)
+  const globe = document.createElement('button');
+  globe.className = 'retailer-btn retailer-btn--globe';
+  globe.title = 'More stores';
+  globe.setAttribute('aria-label', 'More stores');
+  globe.innerHTML = ICONS.globe;
+  globe.addEventListener('click', e => {
+    e.stopPropagation();
+    openGlobeLightbox(book, overflow);
+  });
+  row.appendChild(globe);
+
+  card.appendChild(coverWrap);
+  card.appendChild(row);
+  return card;
+}
+
+function makePlaceholder() {
+  const div = document.createElement('div');
+  div.className = 'cover-placeholder';
+  div.textContent = 'No Cover';
+  return div;
+}
+
+// ---------------------------------------------------------------------------
+// Book lightbox (cover click)
+// ---------------------------------------------------------------------------
+function openBookLightbox(book) {
+  const { primary, overflow } = getSlots(book);
+
+  document.getElementById('blCover').src = book.cover || '';
+  document.getElementById('blCover').alt = book.title;
+  document.getElementById('blSeries').textContent =
+    book.series ? `${book.series}${book.seriesNumber ? ' · Book ' + book.seriesNumber : ''}` : '';
+  document.getElementById('blTitle').textContent = book.title;
+  document.getElementById('blAuthor').textContent = book.author || '';
+  document.getElementById('blBlurb').textContent = book.blurb || '';
+
+  const btns = document.getElementById('blBtns');
+  btns.innerHTML = '';
+
+  // Top 3 retailer pills
+  primary.forEach(key => {
+    const r = RETAILERS[key];
+    const a = document.createElement('a');
+    a.className = 'lb-pill';
+    a.href = book.links[key];
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.innerHTML = r.icon + `<span>${r.label}</span>`;
+    btns.appendChild(a);
+  });
+
+  // "+ More Stores" pill if overflow exists
+  if (overflow.length > 0) {
+    const more = document.createElement('button');
+    more.className = 'lb-pill lb-pill--more';
+    more.innerHTML = ICONS.globe + `<span>+ ${overflow.length} more store${overflow.length > 1 ? 's' : ''}</span>`;
+    more.addEventListener('click', () => {
+      closeBookLightbox();
+      openGlobeLightbox(book, overflow);
+    });
+    btns.appendChild(more);
+  }
+
+  document.getElementById('bookOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBookLightbox() {
+  document.getElementById('bookOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ---------------------------------------------------------------------------
+// Globe lightbox (globe icon or "+ More Stores")
+// ---------------------------------------------------------------------------
+function openGlobeLightbox(book, overflow) {
+  document.getElementById('globeTitle').textContent = book.title;
+  document.getElementById('globeIconWrap').innerHTML = ICONS.globe;
+
+  const list = document.getElementById('globeList');
+  list.innerHTML = '';
+
+  overflow.forEach(key => {
+    const r = RETAILERS[key];
+    const a = document.createElement('a');
+    a.className = 'globe-row';
+    a.href = book.links[key];
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.innerHTML = r.icon + `<span>${r.label}</span><span class="globe-row-arrow">›</span>`;
+    list.appendChild(a);
+  });
+
+  document.getElementById('globeOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGlobeLightbox() {
+  document.getElementById('globeOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ---------------------------------------------------------------------------
+// Event wiring
+// ---------------------------------------------------------------------------
+document.getElementById('bookClose').addEventListener('click', closeBookLightbox);
+document.getElementById('bookOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('bookOverlay')) closeBookLightbox();
+});
+
+document.getElementById('globeClose').addEventListener('click', closeGlobeLightbox);
+document.getElementById('globeOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('globeOverlay')) closeGlobeLightbox();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeBookLightbox(); closeGlobeLightbox(); }
+});
+
+// ---------------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------------
+const grid = document.getElementById('bookGrid');
+sortBooks(books).forEach(book => grid.appendChild(buildCard(book)));
+</script>
+</body>
+</html>

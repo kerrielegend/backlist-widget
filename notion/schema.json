@@ -1,0 +1,120 @@
+{
+  "database_name": "Books",
+  "description": "Author backlist database powering the book widget embed",
+  "sort_default": ["Series Name ASC", "Series Number ASC", "Publication Date DESC"],
+  "properties": {
+    "Title": {
+      "type": "title",
+      "widget_key": "title",
+      "required": true,
+      "notes": "Primary field — the book title"
+    },
+    "Cover Image": {
+      "type": "files",
+      "widget_key": "cover",
+      "required": true,
+      "notes": "Upload the book cover. Widget uses the first file."
+    },
+    "Author": {
+      "type": "rich_text",
+      "widget_key": "author",
+      "required": true
+    },
+    "Blurb": {
+      "type": "rich_text",
+      "widget_key": "blurb",
+      "notes": "Short back-cover description shown in the lightbox"
+    },
+    "Series Name": {
+      "type": "select",
+      "widget_key": "series",
+      "notes": "Leave blank for standalones. Widget groups and sorts by this."
+    },
+    "Series Number": {
+      "type": "number",
+      "widget_key": "seriesNumber",
+      "format": "number",
+      "notes": "Position in series (1, 2, 3…). Standalones leave blank."
+    },
+    "Genre": {
+      "type": "multi_select",
+      "widget_key": "genre",
+      "options": [
+        "Romance", "Dark Romance", "Fantasy", "Dark Fantasy",
+        "Paranormal Romance", "Urban Fantasy", "Thriller", "Suspense",
+        "Mystery", "Cozy Mystery", "Historical Fiction", "Historical Romance",
+        "Sci-Fi", "Horror", "Contemporary Fiction", "Women's Fiction",
+        "Young Adult", "New Adult", "Literary Fiction"
+      ]
+    },
+    "Sub-genre": {
+      "type": "multi_select",
+      "widget_key": "subgenre"
+    },
+    "Format": {
+      "type": "multi_select",
+      "widget_key": "format",
+      "options": ["Ebook", "Paperback", "Hardcover", "Audiobook"]
+    },
+    "Publication Date": {
+      "type": "date",
+      "widget_key": "pubDate",
+      "notes": "Used for New Release badge logic and standalone sort order"
+    },
+    "Status": {
+      "type": "select",
+      "widget_key": "status",
+      "options": ["Published", "Pre-Order", "Coming Soon", "Archived"],
+      "notes": "Archived books are hidden from the widget"
+    },
+    "Featured": {
+      "type": "checkbox",
+      "widget_key": "featured",
+      "notes": "Pins the book to the highlights carousel (if enabled)"
+    },
+    "New Release": {
+      "type": "checkbox",
+      "widget_key": "newRelease",
+      "notes": "Shows a NEW badge on the card"
+    },
+    "Widget Visible": {
+      "type": "checkbox",
+      "widget_key": "visible",
+      "default": true,
+      "notes": "Uncheck to hide from widget without deleting the record"
+    },
+    "Widget Order": {
+      "type": "number",
+      "widget_key": "order",
+      "notes": "Optional manual override for display order within a series or standalone group"
+    },
+    "Link: Amazon": { "type": "url", "widget_key": "amazon" },
+    "Link: Barnes & Noble": { "type": "url", "widget_key": "bn" },
+    "Link: Apple Books": { "type": "url", "widget_key": "apple" },
+    "Link: Kobo": { "type": "url", "widget_key": "kobo" },
+    "Link: Google Play Books": { "type": "url", "widget_key": "googleplay" },
+    "Link: Audible": { "type": "url", "widget_key": "audible" },
+    "Link: BookFunnel": { "type": "url", "widget_key": "bookfunnel" },
+    "Link: Bookshop.org": { "type": "url", "widget_key": "bookshop" },
+    "Link: Payhip": { "type": "url", "widget_key": "payhip" },
+    "Link: Gumroad": { "type": "url", "widget_key": "gumroad" },
+    "Link: Libro.fm": { "type": "url", "widget_key": "librofm" },
+    "Link: Books-A-Million": { "type": "url", "widget_key": "bam" },
+    "Link: Smashwords": { "type": "url", "widget_key": "smashwords" },
+    "Link: Draft2Digital": { "type": "url", "widget_key": "d2d" },
+    "Link: Scribd / Everand": { "type": "url", "widget_key": "scribd" },
+    "Link: Spotify Audiobooks": { "type": "url", "widget_key": "spotify" },
+    "Link: Chirp": { "type": "url", "widget_key": "chirp" },
+    "Link: Booktopia": { "type": "url", "widget_key": "booktopia" },
+    "Link: Waterstones": { "type": "url", "widget_key": "waterstones" },
+    "Link: Blackwell's": { "type": "url", "widget_key": "blackwells" },
+    "Link: Author Store": { "type": "url", "widget_key": "authorstore", "notes": "Author's own website or Shopify/WooCommerce store" },
+    "Link: Libby / OverDrive": { "type": "url", "widget_key": "libby" },
+    "Link: Hoopla": { "type": "url", "widget_key": "hoopla" },
+    "Link: Downpour": { "type": "url", "widget_key": "downpour" },
+    "Link: Storytel": { "type": "url", "widget_key": "storytel" },
+    "Link: Walmart": { "type": "url", "widget_key": "walmart" },
+    "Link: Target": { "type": "url", "widget_key": "target" },
+    "Link: ThriftBooks": { "type": "url", "widget_key": "thriftbooks" }
+  }
+}
