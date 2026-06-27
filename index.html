@@ -728,8 +728,29 @@ document.addEventListener('keydown', e => {
 // ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
-const grid = document.getElementById('bookGrid');
-sortBooks(books).forEach(book => grid.appendChild(buildCard(book)));
+function render(list) {
+  const grid = document.getElementById('bookGrid');
+  grid.innerHTML = '';
+  sortBooks(list).forEach(book => grid.appendChild(buildCard(book)));
+}
+
+// ---------------------------------------------------------------------------
+// Init — fetch live data when ?token= is present, else use inline sample data
+// ---------------------------------------------------------------------------
+(async function init() {
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { render(books); return; }
+
+  try {
+    const res = await fetch(`/api/books?token=${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const { books: live } = await res.json();
+    render(live);
+  } catch (err) {
+    console.warn('Widget: API fetch failed, using sample data.', err);
+    render(books);
+  }
+})();
 </script>
 </body>
 </html>
