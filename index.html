@@ -65,12 +65,43 @@
     text-transform: uppercase; font-family: 'Helvetica Neue', sans-serif;
   }
 
-  /* New Release badge */
-  .badge-new {
+  /* Accent colour token — overridden via &accent= URL param */
+  :root { --accent: #c8a96e; }
+
+  /* Filter tabs */
+  #filterTabs {
+    display: none;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 4px 12px;
+    scrollbar-width: none;
+  }
+  #filterTabs::-webkit-scrollbar { display: none; }
+  .filter-tab {
+    flex: 0 0 auto;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid #333;
+    background: transparent;
+    color: #888;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .filter-tab:hover { background: #2a2a2a; color: #bbb; }
+  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  body.theme-light .filter-tab { border-color: rgba(0,0,0,0.18); color: #666; }
+  body.theme-light .filter-tab:hover { background: rgba(0,0,0,0.06); color: #333; }
+  body.theme-light .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Card badges */
+  .card-badge {
     position: absolute;
     top: 8px; right: 8px;
-    background: #c8a96e;
-    color: #1a1a1a;
     font-family: 'Helvetica Neue', sans-serif;
     font-size: 9px;
     font-weight: 700;
@@ -79,6 +110,33 @@
     padding: 3px 6px;
     border-radius: 3px;
   }
+  .badge-new      { background: var(--accent); color: #1a1a1a; }
+  .badge-preorder { background: #6e9dc8; color: #fff; }
+  .badge-featured { background: var(--accent); color: #1a1a1a; }
+
+  /* Coming Soon overlay */
+  .coming-soon-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(20,20,20,0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+  }
+  .coming-soon-overlay span {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ccc;
+    text-align: center;
+    padding: 0 8px;
+    line-height: 1.4;
+  }
+  body.theme-light .coming-soon-overlay { background: rgba(255,255,255,0.65); }
+  body.theme-light .coming-soon-overlay span { color: #444; }
 
   /* Retailer icon row */
   .retailer-row {
@@ -329,6 +387,7 @@
 </head>
 <body>
 
+<div id="filterTabs"></div>
 <div class="grid" id="bookGrid"></div>
 
 <!-- Book lightbox -->
@@ -552,19 +611,100 @@ const books = [
 ];
 
 // ---------------------------------------------------------------------------
-// Sort: series (by name → number) then standalones (by pubDate → title)
+// Sort: featured first, then series, then standalones
 // ---------------------------------------------------------------------------
 function sortBooks(list) {
-  const series = list.filter(b => b.series);
-  const standalones = list.filter(b => !b.series);
+  const featured    = list.filter(b => b.featured);
+  const rest        = list.filter(b => !b.featured);
+  const series      = rest.filter(b => b.series);
+  const standalones = rest.filter(b => !b.series);
 
   series.sort((a, b) => {
-    const s = a.series.localeCompare(b.series);
+    const s = (a.series || '').localeCompare(b.series || '');
     if (s !== 0) return s;
     return (a.seriesNumber || 0) - (b.seriesNumber || 0);
   });
 
-  return [...series, ...standalones];
+  standalones.sort((a, b) => (b.pubDate || '').localeCompare(a.pubDate || ''));
+
+  return [...featured, ...series, ...standalones];
+}
+
+// ---------------------------------------------------------------------------
+// Filter tabs
+// ---------------------------------------------------------------------------
+let allBooks = [];
+let activeFilter = 'all';
+let currentToken = null;
+let affiliateTags = {};
+
+function getTabs(books) {
+  const tabs = [{ key: 'all', label: 'All' }];
+  const hasPreorders = books.some(b => b.status === 'Pre-order');
+  const hasComingSoon = books.some(b => b.status === 'Coming Soon');
+  if (hasPreorders || hasComingSoon) tabs.push({ key: 'upcoming', label: 'Coming Soon' });
+  const seriesNames = [...new Set(books.filter(b => b.series).map(b => b.series))].sort();
+  seriesNames.forEach(s => tabs.push({ key: `series:${s}`, label: s }));
+  const hasStandalones = books.some(b => !b.series && b.status === 'Published');
+  if (hasStandalones && seriesNames.length > 0) tabs.push({ key: 'standalones', label: 'Standalones' });
+  return tabs;
+}
+
+function filterBooks(books, filter) {
+  if (filter === 'all') return books;
+  if (filter === 'upcoming') return books.filter(b => b.status === 'Pre-order' || b.status === 'Coming Soon');
+  if (filter === 'standalones') return books.filter(b => !b.series);
+  if (filter.startsWith('series:')) return books.filter(b => b.series === filter.slice(7));
+  return books;
+}
+
+function renderTabs(tabs) {
+  const bar = document.getElementById('filterTabs');
+  bar.innerHTML = '';
+  if (tabs.length <= 2) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  tabs.forEach(tab => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab' + (tab.key === activeFilter ? ' active' : '');
+    btn.textContent = tab.label;
+    btn.addEventListener('click', () => {
+      activeFilter = tab.key;
+      renderTabs(tabs);
+      render(filterBooks(allBooks, activeFilter));
+    });
+    bar.appendChild(btn);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Affiliate tag injection
+// ---------------------------------------------------------------------------
+const AFFILIATE_PARAMS = {
+  amazon:   tag => `tag=${tag}`,
+  bookshop: tag => `a_aid=${tag}`,
+  kobo:     tag => `affiliate=${tag}`,
+};
+
+function applyAffiliate(url, retailerKey) {
+  if (!url || url === '#') return url;
+  const tag = affiliateTags[retailerKey];
+  if (!tag) return url;
+  const builder = AFFILIATE_PARAMS[retailerKey];
+  if (!builder) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return url + sep + builder(tag);
+}
+
+// ---------------------------------------------------------------------------
+// Click tracking (fire-and-forget)
+// ---------------------------------------------------------------------------
+function trackClick(bookId, retailerKey) {
+  if (!currentToken) return;
+  fetch('/api/click', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: currentToken, book_id: bookId, retailer: retailerKey }),
+  }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -579,7 +719,17 @@ function getSlots(book) {
 // Build a single book card
 // ---------------------------------------------------------------------------
 function buildCard(book) {
-  const { primary, overflow } = getSlots(book);
+  const isComingSoon = book.status === 'Coming Soon';
+  const isPreorder   = book.status === 'Pre-order';
+
+  // Apply affiliate tags to links
+  const links = {};
+  for (const [k, v] of Object.entries(book.links || {})) {
+    links[k] = applyAffiliate(v, k);
+  }
+  const augmented = { ...book, links };
+
+  const { primary, overflow } = getSlots(augmented);
 
   const card = document.createElement('div');
   card.className = 'book-card';
@@ -592,61 +742,81 @@ function buildCard(book) {
     const img = document.createElement('img');
     img.src = book.cover;
     img.alt = book.title;
-    img.onerror = function () {
-      this.replaceWith(makePlaceholder());
-    };
+    img.onerror = function () { this.replaceWith(makePlaceholder()); };
     coverWrap.appendChild(img);
   } else {
     coverWrap.appendChild(makePlaceholder());
   }
 
-  if (book.newRelease) {
-    const badge = document.createElement('div');
-    badge.className = 'badge-new';
-    badge.textContent = 'New';
-    coverWrap.appendChild(badge);
+  // Badges
+  if (book.featured && !isPreorder && !isComingSoon) {
+    const b = document.createElement('div');
+    b.className = 'card-badge badge-featured';
+    b.textContent = 'Featured';
+    coverWrap.appendChild(b);
+  }
+  if (isPreorder) {
+    const b = document.createElement('div');
+    b.className = 'card-badge badge-preorder';
+    b.textContent = 'Pre-order';
+    coverWrap.appendChild(b);
+  }
+  if (isComingSoon) {
+    const overlay = document.createElement('div');
+    overlay.className = 'coming-soon-overlay';
+    overlay.innerHTML = '<span>Coming<br>Soon</span>';
+    coverWrap.appendChild(overlay);
   }
 
-  coverWrap.addEventListener('click', () => openBookLightbox(book));
+  coverWrap.addEventListener('click', () => { if (!isComingSoon) openBookLightbox(augmented); });
+  if (!isComingSoon) coverWrap.style.cursor = 'pointer';
 
-  // Retailer row: 3 dynamic slots + globe
+  // Retailer row
   const row = document.createElement('div');
   row.className = 'retailer-row';
 
-  for (let i = 0; i < 3; i++) {
-    const key = primary[i];
-    if (key) {
-      const r = RETAILERS[key];
-      const a = document.createElement('a');
-      a.className = 'retailer-btn';
-      a.href = book.links[key];
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.title = r.label;
-      a.setAttribute('aria-label', r.label);
-      a.innerHTML = r.icon;
-      a.addEventListener('click', e => e.stopPropagation());
-      row.appendChild(a);
-    } else {
-      // Empty placeholder slot
+  if (isComingSoon) {
+    // Grey placeholder row — no clickable buttons
+    for (let i = 0; i < 4; i++) {
       const empty = document.createElement('div');
       empty.className = 'retailer-btn retailer-btn--empty';
-      empty.innerHTML = SVG('M12 12m-1 0a1 1 0 102 0 1 1 0 10-2 0'); // tiny dot
+      empty.innerHTML = SVG('M12 12m-1 0a1 1 0 102 0 1 1 0 10-2 0');
       row.appendChild(empty);
     }
-  }
+  } else {
+    for (let i = 0; i < 3; i++) {
+      const key = primary[i];
+      if (key) {
+        const r = RETAILERS[key];
+        const a = document.createElement('a');
+        a.className = 'retailer-btn';
+        a.href = links[key];
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.title = r.label;
+        a.setAttribute('aria-label', r.label);
+        a.innerHTML = r.icon;
+        a.addEventListener('click', e => { e.stopPropagation(); trackClick(book.id, key); });
+        row.appendChild(a);
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'retailer-btn retailer-btn--empty';
+        empty.innerHTML = SVG('M12 12m-1 0a1 1 0 102 0 1 1 0 10-2 0');
+        row.appendChild(empty);
+      }
+    }
 
-  // Globe slot (always visible)
-  const globe = document.createElement('button');
-  globe.className = 'retailer-btn retailer-btn--globe';
-  globe.title = 'More stores';
-  globe.setAttribute('aria-label', 'More stores');
-  globe.innerHTML = ICONS.globe;
-  globe.addEventListener('click', e => {
-    e.stopPropagation();
-    openGlobeLightbox(book, overflow);
-  });
-  row.appendChild(globe);
+    const globe = document.createElement('button');
+    globe.className = 'retailer-btn retailer-btn--globe';
+    globe.title = 'More stores';
+    globe.setAttribute('aria-label', 'More stores');
+    globe.innerHTML = ICONS.globe;
+    globe.addEventListener('click', e => {
+      e.stopPropagation();
+      openGlobeLightbox(augmented, overflow);
+    });
+    row.appendChild(globe);
+  }
 
   card.appendChild(coverWrap);
   card.appendChild(row);
@@ -773,17 +943,29 @@ function render(list) {
   sortBooks(list).forEach(book => grid.appendChild(buildCard(book)));
 }
 
+function loadBooks(books, tags) {
+  affiliateTags = tags || {};
+  allBooks = books;
+  const tabs = getTabs(books);
+  renderTabs(tabs);
+  render(filterBooks(allBooks, activeFilter));
+}
+
 // ---------------------------------------------------------------------------
 // Init — fetch live data when ?token= is present, else use inline sample data
 // ---------------------------------------------------------------------------
 (async function init() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
+  const token  = params.get('token');
+  const accent = params.get('accent');
   if (params.get('theme') === 'light') document.body.classList.add('theme-light');
-  if (!token) { render(books); return; }
+  if (accent) document.documentElement.style.setProperty('--accent', decodeURIComponent(accent));
+  if (!token) { loadBooks(books, {}); return; }
+
+  currentToken = token;
 
   try {
-    const res = await fetch(`/api/books?token=${encodeURIComponent(token)}`);
+    const res  = await fetch(`/api/books?token=${encodeURIComponent(token)}`);
     const json = await res.json();
     if (!res.ok) {
       showError(json.error || `Error ${res.status}`);
@@ -793,7 +975,7 @@ function render(list) {
       showError('No books found. Make sure at least one row has Status = Published and Widget Visible checked.');
       return;
     }
-    render(json.books);
+    loadBooks(json.books, json.affiliate_tags);
   } catch (err) {
     console.warn('Widget fetch error:', err);
     showError('Could not load books. Check your internet connection and try again.');

@@ -26,16 +26,15 @@ async function lookupWidget(widgetToken) {
   if (!url || !key) throw new Error('Supabase not configured');
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
-  // Look up in the widgets table first (new multi-widget architecture)
   const { data: widget } = await db
     .from('widgets')
-    .select('notion_token, database_id')
+    .select('notion_token, database_id, affiliate_tags')
     .eq('token', widgetToken)
     .maybeSingle();
 
   if (widget) return widget;
 
-  // Fallback: look up in licenses table (legacy single-widget)
+  // Fallback: legacy single-widget licenses table
   const { data: license } = await db
     .from('licenses')
     .select('notion_token, database_id')
@@ -108,14 +107,17 @@ function transformPage(page) {
     seriesNumber: p['Series Number']?.number ?? null,
     pubDate:      p['Publication Date']?.date?.start ?? null,
     status:       p['Status']?.select?.name ?? null,
+    featured:     p['Featured']?.checkbox ?? false,
     visible:      p['Widget Visible']?.checkbox ?? true,
     links,
   };
 }
 
 function sortBooks(books) {
-  const series      = books.filter(b => b.series);
-  const standalones = books.filter(b => !b.series);
+  const featured    = books.filter(b => b.featured);
+  const rest        = books.filter(b => !b.featured);
+  const series      = rest.filter(b => b.series);
+  const standalones = rest.filter(b => !b.series);
 
   series.sort((a, b) => {
     const nameSort = (a.series ?? '').localeCompare(b.series ?? '');
@@ -132,7 +134,7 @@ function sortBooks(books) {
     return a.title.localeCompare(b.title);
   });
 
-  return [...series, ...standalones];
+  return [...featured, ...series, ...standalones];
 }
 
 async function fetchAllBooks(notion, databaseId) {
@@ -144,8 +146,12 @@ async function fetchAllBooks(notion, databaseId) {
       database_id: databaseId,
       filter: {
         and: [
-          { property: 'Status',         select:   { equals: 'Published' } },
           { property: 'Widget Visible', checkbox: { equals: true } },
+          { or: [
+            { property: 'Status', select: { equals: 'Published'    } },
+            { property: 'Status', select: { equals: 'Pre-order'    } },
+            { property: 'Status', select: { equals: 'Coming Soon'  } },
+          ]},
         ],
       },
       start_cursor: cursor,
@@ -178,9 +184,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  let notionToken, databaseId;
+  let notionToken, databaseId, widget;
   try {
-    const widget = await lookupWidget(widgetToken);
+    widget = await lookupWidget(widgetToken);
     if (!widget) {
       res.status(401).json({ error: 'Invalid token' });
       return;
@@ -202,7 +208,8 @@ module.exports = async function handler(req, res) {
     const notion = new Client({ auth: notionToken });
     const raw    = await fetchAllBooks(notion, databaseId);
     const books  = sortBooks(raw);
-    res.status(200).json({ books });
+    const affiliate_tags = widget?.affiliate_tags || null;
+    res.status(200).json({ books, affiliate_tags });
   } catch (err) {
     console.error('Notion fetch error:', err);
     res.status(502).json({ error: 'Failed to fetch from Notion' });
