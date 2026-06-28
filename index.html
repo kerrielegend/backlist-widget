@@ -120,6 +120,25 @@
     .retailer-btn img { width: 13px; height: 13px; }
   }
 
+  /* ── Light / transparent theme ──────────────────────────────────────── */
+  body.theme-light { background: transparent; }
+  body.theme-light .cover-wrap {
+    box-shadow: 4px 6px 16px rgba(0,0,0,0.22);
+  }
+  body.theme-light .book-card:hover .cover-wrap {
+    box-shadow: 6px 10px 22px rgba(0,0,0,0.32);
+  }
+  body.theme-light .retailer-btn {
+    background: rgba(0,0,0,0.07);
+    border-color: rgba(0,0,0,0.14);
+  }
+  body.theme-light .retailer-btn:hover { background: rgba(0,0,0,0.13); }
+  body.theme-light .retailer-btn svg { fill: #444; }
+  body.theme-light .retailer-btn img { filter: grayscale(1) brightness(0.3) !important; }
+  body.theme-light .retailer-btn--empty { background: transparent; border-color: rgba(0,0,0,0.06); }
+  body.theme-light .retailer-btn--empty svg { fill: rgba(0,0,0,0.08); }
+  body.theme-light .grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }
+
   /* Lightbox shared */
   .lb-overlay {
     display: none;
@@ -740,7 +759,9 @@ function render(list) {
 // Init — fetch live data when ?token= is present, else use inline sample data
 // ---------------------------------------------------------------------------
 (async function init() {
-  const token = new URLSearchParams(window.location.search).get('token');
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (params.get('theme') === 'light') document.body.classList.add('theme-light');
   if (!token) { render(books); return; }
 
   try {
