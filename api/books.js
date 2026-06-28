@@ -217,6 +217,7 @@ module.exports = async function handler(req, res) {
     const raw    = await fetchAllBooks(notion, databaseId);
     const books  = sortBooks(raw);
     const affiliate_tags = widget?.affiliate_tags || null;
+    res.setHeader('Cache-Control', 'no-store');
     res.status(200).json({ books, affiliate_tags });
   } catch (err) {
     console.error('Notion fetch error:', err);
