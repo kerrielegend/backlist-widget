@@ -100,7 +100,7 @@ function transformPage(page) {
   return {
     id:           page.id,
     title:        text(p['Name']) || text(p['Title']),
-    cover:        coverUrl(p['Cover Image']),
+    cover:        p['Cover URL']?.url ?? coverUrl(p['Cover Image']),
     author:       text(p['Author']),
     blurb:        text(p['Blurb']),
     series:       text(p['Series']) || p['Series Name']?.select?.name || null,
