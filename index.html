@@ -18,17 +18,18 @@
     display: flex;
     flex-direction: row;
     gap: 16px;
-    overflow-x: auto;
+    overflow-x: scroll;
     padding: 8px 4px 20px;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: #333 transparent;
+    scrollbar-color: #555 #2a2a2a;
   }
 
-  .grid::-webkit-scrollbar { height: 4px; }
-  .grid::-webkit-scrollbar-track { background: transparent; }
-  .grid::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .grid::-webkit-scrollbar { height: 6px; }
+  .grid::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 3px; }
+  .grid::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+  .grid::-webkit-scrollbar-thumb:hover { background: #777; }
 
   /* Book card */
   .book-card {
@@ -137,7 +138,10 @@
   body.theme-light .retailer-btn img { filter: grayscale(1) brightness(0.3) !important; }
   body.theme-light .retailer-btn--empty { background: transparent; border-color: rgba(0,0,0,0.06); }
   body.theme-light .retailer-btn--empty svg { fill: rgba(0,0,0,0.08); }
-  body.theme-light .grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }
+  body.theme-light .grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
+  body.theme-light .grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); }
+  body.theme-light .grid::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.4); }
+  body.theme-light .grid { scrollbar-color: rgba(0,0,0,0.25) rgba(0,0,0,0.08); }
 
   /* Lightbox shared */
   .lb-overlay {
