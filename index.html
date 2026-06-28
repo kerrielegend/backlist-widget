@@ -123,7 +123,7 @@
   /* Lightbox shared */
   .lb-overlay {
     display: none;
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
     backdrop-filter: blur(6px);
@@ -137,11 +137,9 @@
     background: #222;
     border-radius: 16px 16px 0 0;
     width: 100%;
-    max-width: 480px;
+    max-width: 740px;
     animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
-    max-height: 90%;
-    overflow-y: auto;
   }
 
   @keyframes slideUp {
@@ -168,12 +166,17 @@
   .lb-close:hover { background: #3c3c3c; color: #eee; }
 
   /* Book lightbox */
-  #bookLightbox { padding: 28px 24px 40px; }
+  #bookLightbox { padding: 28px 28px 36px; }
 
   .book-lb-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: 90px 1fr 172px;
     gap: 20px;
-    align-items: flex-start;
+    align-items: start;
+  }
+  @media (max-width: 600px) {
+    .book-lb-inner { grid-template-columns: 70px 1fr; }
+    .book-lb-buy { grid-column: 1 / -1; flex-direction: row !important; flex-wrap: wrap; }
   }
 
   .book-lb-cover {
@@ -214,40 +217,34 @@
     color: #888;
     line-height: 1.7;
     font-family: 'Helvetica Neue', sans-serif;
-    margin-bottom: 20px;
   }
 
-  .book-lb-btns {
+  .book-lb-buy {
     display: flex;
-    gap: 7px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .lb-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
-    border-radius: 20px;
+    gap: 7px;
+    padding: 8px 11px;
+    border-radius: 8px;
     background: #2c2c2c;
     border: 1px solid #383838;
     color: #bbb;
     font-size: 12px;
     font-family: 'Helvetica Neue', sans-serif;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     text-decoration: none;
     transition: background 0.15s;
     white-space: nowrap;
     cursor: pointer;
   }
-  .lb-pill:hover { background: #383838; color: #eee; }
+  .lb-pill:hover { background: #343434; color: #eee; }
   .lb-pill svg { width: 13px; height: 13px; fill: #888; flex-shrink: 0; }
-  .lb-pill--more {
-    background: #222;
-    border-color: #2c2c2c;
-    color: #666;
-  }
-  .lb-pill--more:hover { background: #2c2c2c; color: #999; }
+  .lb-pill img { width: 13px; height: 13px; flex-shrink: 0; }
 
   /* Globe / more stores lightbox */
   #globeLightbox { padding: 24px 20px 36px; }
@@ -318,8 +315,8 @@
         <div class="book-lb-title"  id="blTitle"></div>
         <div class="book-lb-author" id="blAuthor"></div>
         <div class="book-lb-blurb"  id="blBlurb"></div>
-        <div class="book-lb-btns"   id="blBtns"></div>
       </div>
+      <div class="book-lb-buy" id="blBtns"></div>
     </div>
   </div>
 </div>
@@ -657,8 +654,8 @@ function openBookLightbox(book) {
   const btns = document.getElementById('blBtns');
   btns.innerHTML = '';
 
-  // Top 3 retailer pills
-  primary.forEach(key => {
+  // All available retailers in priority order
+  [...primary, ...overflow].forEach(key => {
     const r = RETAILERS[key];
     const a = document.createElement('a');
     a.className = 'lb-pill';
@@ -668,18 +665,6 @@ function openBookLightbox(book) {
     a.innerHTML = r.icon + `<span>${r.label}</span>`;
     btns.appendChild(a);
   });
-
-  // "+ More Stores" pill if overflow exists
-  if (overflow.length > 0) {
-    const more = document.createElement('button');
-    more.className = 'lb-pill lb-pill--more';
-    more.innerHTML = ICONS.globe + `<span>+ ${overflow.length} more store${overflow.length > 1 ? 's' : ''}</span>`;
-    more.addEventListener('click', () => {
-      closeBookLightbox();
-      openGlobeLightbox(book, overflow);
-    });
-    btns.appendChild(more);
-  }
 
   document.getElementById('bookOverlay').classList.add('active');
   document.body.style.overflow = 'hidden';
