@@ -1,39 +1,69 @@
 const { Client } = require('@notionhq/client');
+const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
-const NOTION_TOKEN       = process.env.NOTION_TOKEN;
-const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
-const WIDGET_TOKEN       = process.env.WIDGET_TOKEN;
+// AES-256-GCM decrypt — must match TOKEN_ENC_KEY used in backlist-site
+const PREFIX = 'enc:v1:';
+function getEncKey() {
+  const secret = process.env.TOKEN_ENC_KEY;
+  if (!secret) throw new Error('TOKEN_ENC_KEY is not configured');
+  return crypto.createHash('sha256').update(secret, 'utf8').digest();
+}
+function decrypt(value) {
+  if (!value || !value.startsWith(PREFIX)) return value;
+  const raw = Buffer.from(value.slice(PREFIX.length), 'base64');
+  const iv = raw.subarray(0, 12);
+  const tag = raw.subarray(12, 28);
+  const ciphertext = raw.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', getEncKey(), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+}
+
+async function lookupCustomer(widgetToken) {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase not configured');
+  const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data } = await db
+    .from('licenses')
+    .select('notion_token, database_id')
+    .eq('widget_token', widgetToken)
+    .eq('status', 'active')
+    .maybeSingle();
+  return data;
+}
 
 // Notion property name → widget_key
 const LINK_FIELDS = {
-  'Link: Amazon':            'amazon',
-  'Link: Barnes & Noble':    'bn',
-  'Link: Apple Books':       'apple',
-  'Link: Kobo':              'kobo',
-  'Link: Google Play Books': 'googleplay',
-  'Link: Audible':           'audible',
-  'Link: BookFunnel':        'bookfunnel',
-  'Link: Bookshop.org':      'bookshop',
-  'Link: Payhip':            'payhip',
-  'Link: Gumroad':           'gumroad',
-  'Link: Libro.fm':          'librofm',
-  'Link: Books-A-Million':   'bam',
-  'Link: Smashwords':        'smashwords',
-  'Link: Draft2Digital':     'd2d',
-  'Link: Scribd / Everand':  'scribd',
-  'Link: Spotify Audiobooks':'spotify',
-  'Link: Chirp':             'chirp',
-  'Link: Booktopia':         'booktopia',
-  'Link: Waterstones':       'waterstones',
-  "Link: Blackwell's":       'blackwells',
-  'Link: Author Store':      'authorstore',
-  'Link: Libby / OverDrive': 'libby',
-  'Link: Hoopla':            'hoopla',
-  'Link: Downpour':          'downpour',
-  'Link: Storytel':          'storytel',
-  'Link: Walmart':           'walmart',
-  'Link: Target':            'target',
-  'Link: ThriftBooks':       'thriftbooks',
+  'Amazon URL':            'amazon',
+  'Barnes & Noble URL':    'bn',
+  'Apple Books URL':       'apple',
+  'Kobo URL':              'kobo',
+  'Google Play Books URL': 'googleplay',
+  'Audible URL':           'audible',
+  'BookFunnel URL':        'bookfunnel',
+  'Bookshop.org URL':      'bookshop',
+  'Payhip URL':            'payhip',
+  'Gumroad URL':           'gumroad',
+  'Libro.fm URL':          'librofm',
+  'Books-A-Million URL':   'bam',
+  'Smashwords URL':        'smashwords',
+  'Draft2Digital URL':     'd2d',
+  'Scribd / Everand URL':  'scribd',
+  'Spotify Audiobooks URL':'spotify',
+  'Chirp URL':             'chirp',
+  'Booktopia URL':         'booktopia',
+  'Waterstones URL':       'waterstones',
+  "Blackwell's URL":       'blackwells',
+  'Author Store URL':      'authorstore',
+  'Libby / OverDrive URL': 'libby',
+  'Hoopla URL':            'hoopla',
+  'Downpour URL':          'downpour',
+  'Storytel URL':          'storytel',
+  'Walmart URL':           'walmart',
+  'Target URL':            'target',
+  'ThriftBooks URL':       'thriftbooks',
 };
 
 function text(prop) {
@@ -58,33 +88,26 @@ function transformPage(page) {
 
   return {
     id:           page.id,
-    title:        text(p['Title']),
+    title:        text(p['Name']),
     cover:        coverUrl(p['Cover Image']),
     author:       text(p['Author']),
     blurb:        text(p['Blurb']),
-    series:       p['Series Name']?.select?.name ?? null,
+    series:       text(p['Series']),
     seriesNumber: p['Series Number']?.number ?? null,
-    genre:        (p['Genre']?.multi_select ?? []).map(g => g.name),
-    subgenre:     (p['Sub-genre']?.multi_select ?? []).map(g => g.name),
-    format:       (p['Format']?.multi_select ?? []).map(f => f.name),
     pubDate:      p['Publication Date']?.date?.start ?? null,
     status:       p['Status']?.select?.name ?? null,
-    featured:     p['Featured']?.checkbox ?? false,
-    newRelease:   p['New Release']?.checkbox ?? false,
     visible:      p['Widget Visible']?.checkbox ?? true,
-    order:        p['Widget Order']?.number ?? null,
     links,
   };
 }
 
 function sortBooks(books) {
-  const series     = books.filter(b => b.series);
+  const series      = books.filter(b => b.series);
   const standalones = books.filter(b => !b.series);
 
   series.sort((a, b) => {
     const nameSort = (a.series ?? '').localeCompare(b.series ?? '');
     if (nameSort !== 0) return nameSort;
-    if (a.order !== null && b.order !== null) return a.order - b.order;
     if (a.seriesNumber !== null && b.seriesNumber !== null) return a.seriesNumber - b.seriesNumber;
     if (a.seriesNumber !== null) return -1;
     if (b.seriesNumber !== null) return 1;
@@ -92,7 +115,6 @@ function sortBooks(books) {
   });
 
   standalones.sort((a, b) => {
-    if (a.order !== null && b.order !== null) return a.order - b.order;
     const dateSort = (b.pubDate ?? '').localeCompare(a.pubDate ?? '');
     if (dateSort !== 0) return dateSort;
     return a.title.localeCompare(b.title);
@@ -101,13 +123,13 @@ function sortBooks(books) {
   return [...series, ...standalones];
 }
 
-async function fetchAllBooks(notion) {
+async function fetchAllBooks(notion, databaseId) {
   const books = [];
   let cursor;
 
   do {
     const res = await notion.databases.query({
-      database_id: NOTION_DATABASE_ID,
+      database_id: databaseId,
       filter: {
         and: [
           { property: 'Status',         select:   { equals: 'Published' } },
@@ -129,27 +151,45 @@ async function fetchAllBooks(notion) {
 }
 
 module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  // Token auth
-  if (WIDGET_TOKEN && req.query.token !== WIDGET_TOKEN) {
-    res.status(401).json({ error: 'Unauthorized' });
+  const widgetToken = req.query.token;
+  if (!widgetToken) {
+    res.status(401).json({ error: 'Missing token' });
     return;
   }
 
-  if (!NOTION_TOKEN || !NOTION_DATABASE_ID) {
-    res.status(500).json({ error: 'API not configured' });
+  let notionToken, databaseId;
+  try {
+    const customer = await lookupCustomer(widgetToken);
+    if (!customer) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+    notionToken = decrypt(customer.notion_token);
+    databaseId  = customer.database_id;
+  } catch (err) {
+    console.error('Supabase lookup error:', err);
+    res.status(500).json({ error: 'Authentication failed' });
+    return;
+  }
+
+  if (!notionToken || !databaseId) {
+    res.status(500).json({ error: 'Widget not fully configured — complete setup at backlist.kerrielegend.com/setup' });
     return;
   }
 
   try {
-    const notion = new Client({ auth: NOTION_TOKEN });
-    const raw    = await fetchAllBooks(notion);
+    const notion = new Client({ auth: notionToken });
+    const raw    = await fetchAllBooks(notion, databaseId);
     const books  = sortBooks(raw);
-
     res.status(200).json({ books });
   } catch (err) {
     console.error('Notion fetch error:', err);
