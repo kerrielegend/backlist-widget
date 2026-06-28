@@ -756,6 +756,14 @@ document.addEventListener('keydown', e => {
 });
 
 // ---------------------------------------------------------------------------
+// Error state
+// ---------------------------------------------------------------------------
+function showError(msg) {
+  const grid = document.getElementById('bookGrid');
+  grid.innerHTML = `<div style="padding:32px 16px;color:#888;font-size:13px;line-height:1.6;">${msg}</div>`;
+}
+
+// ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
 function render(list) {
@@ -775,12 +783,19 @@ function render(list) {
 
   try {
     const res = await fetch(`/api/books?token=${encodeURIComponent(token)}`);
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const { books: live } = await res.json();
-    render(live);
+    const json = await res.json();
+    if (!res.ok) {
+      showError(json.error || `Error ${res.status}`);
+      return;
+    }
+    if (!json.books || json.books.length === 0) {
+      showError('No books found. Make sure at least one row has Status = Published and Widget Visible checked.');
+      return;
+    }
+    render(json.books);
   } catch (err) {
-    console.warn('Widget: API fetch failed, using sample data.', err);
-    render(books);
+    console.warn('Widget fetch error:', err);
+    showError('Could not load books. Check your internet connection and try again.');
   }
 })();
 </script>
