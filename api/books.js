@@ -20,18 +20,30 @@ function decrypt(value) {
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 }
 
-async function lookupCustomer(widgetToken) {
+async function lookupWidget(widgetToken) {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase not configured');
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data } = await db
+
+  // Look up in the widgets table first (new multi-widget architecture)
+  const { data: widget } = await db
+    .from('widgets')
+    .select('notion_token, database_id')
+    .eq('token', widgetToken)
+    .maybeSingle();
+
+  if (widget) return widget;
+
+  // Fallback: look up in licenses table (legacy single-widget)
+  const { data: license } = await db
     .from('licenses')
     .select('notion_token, database_id')
     .eq('widget_token', widgetToken)
     .eq('status', 'active')
     .maybeSingle();
-  return data;
+
+  return license || null;
 }
 
 // Notion property name → widget_key
@@ -168,15 +180,15 @@ module.exports = async function handler(req, res) {
 
   let notionToken, databaseId;
   try {
-    const customer = await lookupCustomer(widgetToken);
-    if (!customer) {
+    const widget = await lookupWidget(widgetToken);
+    if (!widget) {
       res.status(401).json({ error: 'Invalid token' });
       return;
     }
-    notionToken = decrypt(customer.notion_token);
-    databaseId  = customer.database_id;
+    notionToken = decrypt(widget.notion_token);
+    databaseId  = widget.database_id;
   } catch (err) {
-    console.error('Supabase lookup error:', err);
+    console.error('Lookup error:', err);
     res.status(500).json({ error: 'Authentication failed' });
     return;
   }
