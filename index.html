@@ -187,7 +187,9 @@
   .lb-close:hover { background: #3c3c3c; color: #eee; }
 
   /* Book lightbox */
-  #bookLightbox { padding: 28px 28px 36px; }
+  #bookLightbox { padding: 0 18px 28px; }
+  .lb-book-header { display: flex; justify-content: flex-end; padding: 12px 8px 8px; }
+  #bookLightbox .lb-close { position: static; }
 
   .book-lb-inner {
     display: grid;
@@ -243,7 +245,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding-top: 36px;
   }
 
   .lb-pill {
@@ -328,7 +329,9 @@
 <!-- Book lightbox -->
 <div class="lb-overlay" id="bookOverlay">
   <div class="lb-panel" id="bookLightbox">
-    <button class="lb-close" id="bookClose">×</button>
+    <div class="lb-book-header">
+      <button class="lb-close" id="bookClose">×</button>
+    </div>
     <div class="book-lb-inner">
       <div class="book-lb-cover"><img id="blCover" src="" alt=""></div>
       <div class="book-lb-details">
