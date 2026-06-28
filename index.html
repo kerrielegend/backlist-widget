@@ -82,7 +82,7 @@
     padding: 5px 14px;
     border-radius: 20px;
     border: 1px solid #333;
-    background: transparent;
+    background: #1a1a1a;
     color: #888;
     font-family: 'Helvetica Neue', sans-serif;
     font-size: 11px;
@@ -92,11 +92,11 @@
     transition: background 0.15s, color 0.15s, border-color 0.15s;
     white-space: nowrap;
   }
-  .filter-tab:hover { background: #2a2a2a; color: #bbb; }
-  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
-  body.theme-light .filter-tab { border-color: rgba(0,0,0,0.18); color: #666; }
-  body.theme-light .filter-tab:hover { background: rgba(0,0,0,0.06); color: #333; }
-  body.theme-light .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-tab:hover { background: #2a2a2a; color: #bbb; border-color: #444; }
+  .filter-tab.active { background: #2e2e2e; border-color: #666; color: #eee; }
+  body.theme-light .filter-tab { background: #f0f0f0; border-color: rgba(0,0,0,0.14); color: #666; }
+  body.theme-light .filter-tab:hover { background: #e4e4e4; color: #333; }
+  body.theme-light .filter-tab.active { background: #2e2e2e; border-color: #2e2e2e; color: #fff; }
 
   /* Card badges */
   .card-badge {
@@ -943,11 +943,17 @@ function render(list) {
   sortBooks(list).forEach(book => grid.appendChild(buildCard(book)));
 }
 
+let showFilters = true;
+
 function loadBooks(books, tags) {
   affiliateTags = tags || {};
   allBooks = books;
-  const tabs = getTabs(books);
-  renderTabs(tabs);
+  if (showFilters) {
+    const tabs = getTabs(books);
+    renderTabs(tabs);
+  } else {
+    document.getElementById('filterTabs').style.display = 'none';
+  }
   render(filterBooks(allBooks, activeFilter));
 }
 
@@ -959,6 +965,7 @@ function loadBooks(books, tags) {
   const token  = params.get('token');
   const accent = params.get('accent');
   if (params.get('theme') === 'light') document.body.classList.add('theme-light');
+  if (params.get('filters') === '0') showFilters = false;
   if (accent) document.documentElement.style.setProperty('--accent', decodeURIComponent(accent));
   if (!token) { loadBooks(books, {}); return; }
 
