@@ -137,35 +137,43 @@ function sortBooks(books) {
   return [...featured, ...series, ...standalones];
 }
 
-async function fetchAllBooks(notion, databaseId) {
+const VISIBLE_STATUSES = new Set(['Published', 'Pre-order', 'Coming Soon']);
+
+async function queryPages(notion, databaseId, filter) {
   const books = [];
   let cursor;
-
   do {
-    const res = await notion.databases.query({
-      database_id: databaseId,
-      filter: {
-        and: [
-          { property: 'Widget Visible', checkbox: { equals: true } },
-          { or: [
-            { property: 'Status', select: { equals: 'Published'    } },
-            { property: 'Status', select: { equals: 'Pre-order'    } },
-            { property: 'Status', select: { equals: 'Coming Soon'  } },
-          ]},
-        ],
-      },
-      start_cursor: cursor,
-      page_size: 100,
-    });
-
-    for (const page of res.results) {
-      books.push(transformPage(page));
-    }
-
+    const params = { database_id: databaseId, start_cursor: cursor, page_size: 100 };
+    if (filter) params.filter = filter;
+    const res = await notion.databases.query(params);
+    for (const page of res.results) books.push(transformPage(page));
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
-
   return books;
+}
+
+async function fetchAllBooks(notion, databaseId) {
+  const filter = {
+    and: [
+      { property: 'Widget Visible', checkbox: { equals: true } },
+      { or: [
+        { property: 'Status', select: { equals: 'Published'   } },
+        { property: 'Status', select: { equals: 'Pre-order'   } },
+        { property: 'Status', select: { equals: 'Coming Soon' } },
+      ]},
+    ],
+  };
+
+  try {
+    return await queryPages(notion, databaseId, filter);
+  } catch (err) {
+    // Database doesn't have Widget Visible / Status properties yet — fetch all and filter client-side
+    if (err?.status === 400 || err?.code === 'validation_error') {
+      const all = await queryPages(notion, databaseId, null);
+      return all.filter(b => b.visible && (b.status === null || VISIBLE_STATUSES.has(b.status)));
+    }
+    throw err;
+  }
 }
 
 module.exports = async function handler(req, res) {
