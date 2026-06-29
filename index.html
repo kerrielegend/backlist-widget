@@ -461,7 +461,7 @@ const ICONS = {
   chirp:       LIMG('brand-icons/chirp.webp', 'grayscale(1) invert(1) brightness(0.67)'),
   hoopla:      LIMG('brand-icons/hoopla.png', 'grayscale(1) invert(1) brightness(0.67)'),
   booktopia:   LIMG('brand-icons/booktopia.png', 'grayscale(1) invert(1) brightness(0.67)'),
-  libby:       CDNI('overdrive'),
+  libby:       LIMG('brand-icons/libby.svg', 'grayscale(1) invert(1) brightness(0.8)'),
   downpour:    LIMG('brand-icons/downpour-icon.png', 'grayscale(1) brightness(1.2)'),
 
   // ── Brand SVG — real marks ─────────────────────────────────────────────────
@@ -820,7 +820,7 @@ function buildCard(book) {
     globe.innerHTML = ICONS.globe;
     globe.addEventListener('click', e => {
       e.stopPropagation();
-      openGlobeLightbox(augmented, overflow);
+      openBookLightbox(augmented);
     });
     row.appendChild(globe);
   }
