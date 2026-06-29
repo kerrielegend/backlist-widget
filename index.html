@@ -44,7 +44,7 @@
   .cover-wrap {
     position: relative;
     width: 100%;
-    aspect-ratio: 2 / 3;
+    aspect-ratio: 2 / 3; /* overridden to 1/1 by body.covers-square */
     overflow: hidden;
     border-radius: 3px;
     box-shadow: 4px 6px 20px rgba(0,0,0,0.6);
@@ -179,6 +179,10 @@
     .retailer-btn svg { width: 13px; height: 13px; }
     .retailer-btn img { width: 13px; height: 13px; }
   }
+
+  /* ── Square cover mode (audiobooks) — &covers=square ─────────────────── */
+  body.covers-square .cover-wrap { aspect-ratio: 1 / 1; border-radius: 6px; }
+  body.covers-square .book-lb-cover { aspect-ratio: 1 / 1; }
 
   /* ── Light / transparent theme ──────────────────────────────────────── */
   body.theme-light { background: transparent; }
@@ -738,9 +742,11 @@ function buildCard(book) {
   const coverWrap = document.createElement('div');
   coverWrap.className = 'cover-wrap';
 
-  if (book.cover) {
+  const squareMode = document.body.classList.contains('covers-square');
+  const coverSrc = (squareMode && book.audiobookCover) ? book.audiobookCover : book.cover;
+  if (coverSrc) {
     const img = document.createElement('img');
-    img.src = book.cover;
+    img.src = coverSrc;
     img.alt = book.title;
     img.onerror = function () { this.replaceWith(makePlaceholder()); };
     coverWrap.appendChild(img);
@@ -837,8 +843,10 @@ function openBookLightbox(book) {
   const { primary, overflow } = getSlots(book);
 
   const blCoverWrap = document.getElementById('blCover').parentElement;
-  if (book.cover) {
-    document.getElementById('blCover').src = book.cover;
+  const lbSquareMode = document.body.classList.contains('covers-square');
+  const lbCoverSrc = (lbSquareMode && book.audiobookCover) ? book.audiobookCover : book.cover;
+  if (lbCoverSrc) {
+    document.getElementById('blCover').src = lbCoverSrc;
     document.getElementById('blCover').alt = book.title;
     blCoverWrap.style.display = '';
   } else {
@@ -880,8 +888,10 @@ function closeBookLightbox() {
 function openGlobeLightbox(book, overflow) {
   document.getElementById('globeTitle').textContent = book.title;
   const globeIconWrap = document.getElementById('globeIconWrap');
-  if (book.cover) {
-    globeIconWrap.innerHTML = `<img src="${book.cover}" alt="${book.title}">`;
+  const globeSquareMode = document.body.classList.contains('covers-square');
+  const globeCover = (globeSquareMode && book.audiobookCover) ? book.audiobookCover : book.cover;
+  if (globeCover) {
+    globeIconWrap.innerHTML = `<img src="${globeCover}" alt="${book.title}">`;
   } else {
     globeIconWrap.innerHTML = ICONS.globe;
   }
@@ -966,6 +976,7 @@ function loadBooks(books, tags) {
   const accent = params.get('accent');
   if (params.get('theme') === 'light') document.body.classList.add('theme-light');
   if (params.get('filters') === '0') showFilters = false;
+  if (params.get('covers') === 'square') document.body.classList.add('covers-square');
   if (accent) document.documentElement.style.setProperty('--accent', decodeURIComponent(accent));
   if (!token) { loadBooks(books, {}); return; }
 
