@@ -703,12 +703,12 @@ function applyAffiliate(url, retailerKey) {
 // ---------------------------------------------------------------------------
 // Click tracking (fire-and-forget)
 // ---------------------------------------------------------------------------
-function trackClick(bookId, retailerKey) {
+function trackClick(bookId, bookTitle, retailerKey) {
   if (!currentToken) return;
   fetch('/api/click', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: currentToken, book_id: bookId, retailer: retailerKey }),
+    body: JSON.stringify({ token: currentToken, book_id: bookId, book_title: bookTitle, retailer: retailerKey }),
   }).catch(() => {});
 }
 
@@ -803,7 +803,7 @@ function buildCard(book) {
         a.title = r.label;
         a.setAttribute('aria-label', r.label);
         a.innerHTML = r.icon;
-        a.addEventListener('click', e => { e.stopPropagation(); trackClick(book.id, key); });
+        a.addEventListener('click', e => { e.stopPropagation(); trackClick(book.id, book.title, key); });
         row.appendChild(a);
       } else {
         const empty = document.createElement('div');
@@ -871,6 +871,7 @@ function openBookLightbox(book) {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.innerHTML = r.icon + `<span>${r.label}</span>`;
+    a.addEventListener('click', () => trackClick(book.id, book.title, key));
     btns.appendChild(a);
   });
 
